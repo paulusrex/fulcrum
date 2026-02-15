@@ -1,8 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchJSON } from '@/lib/api'
-import type { ObserverActionRecord } from '../../server/db/schema'
 
-export type { ObserverActionRecord }
+export type ObserverActionRecord = {
+  type: 'create_task' | 'store_memory'
+  title?: string
+  content?: string
+  tags?: string[]
+}
 
 export interface ObserverInvocation {
   id: string
