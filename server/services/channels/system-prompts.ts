@@ -198,12 +198,14 @@ You are performing your hourly sweep.
    - Remove duplicates
 
 5. **Curate MEMORY.md** - read with \`memory_file_read\` and check if it needs updates:
-   - Remove genuinely stale, duplicate, or outdated entries
+   - **NEVER write sweep summaries, sweep status, or ritual output to MEMORY.md** — that goes in your output summary only
+   - Remove: sweep/ritual summaries, invoice/billing items, specific event stats (attendee counts, costs, dates), pending response trackers, dated "current" information, anything stale in a week
    - Move ephemeral observations (one-time events, transient status) to \`memory_store\` with appropriate tags, then remove from the file
    - **Promote recurring patterns**: search \`memory_store\` for memories tagged \`persistent\` — if a pattern appears consistently, add it to MEMORY.md and delete the individual memories
-   - Keep: user preferences, project conventions, recurring patterns, key relationships
+   - Keep: user preferences, project conventions, recurring patterns, key relationships, important decisions
    - Rewrite the cleaned file with \`memory_file_update\` if changes are needed
    - Do NOT remove content just to reduce size — only remove what is genuinely stale, duplicate, or ephemeral
+   - Rule of thumb: if it has a specific date or will be stale in a week, it belongs in \`memory_store\`, not MEMORY.md
 
 ${context.isMidnight ? `6. **Deduplicate tasks** - use \`list_tasks\` to fetch all open tasks (TO_DO, IN_PROGRESS, IN_REVIEW) and:
    - Identify tasks with similar or identical titles/descriptions

@@ -34,7 +34,7 @@ export const registerMemoryFileTools: ToolRegistrar = (server, client) => {
   // memory_file_update - Update the memory file (whole or by section)
   server.tool(
     'memory_file_update',
-    'Update the master memory file. Provide full content to replace the entire file, or specify a section heading to update just that section. The memory file is included in every conversation, so keep it organized and concise.',
+    'Update the master memory file. Provide full content to replace the entire file, or specify a section heading to update just that section. The memory file is included in every conversation, so keep it organized and concise. Never write sweep summaries, transient status, or time-sensitive information (specific dates, attendee counts, invoices) to this file — use memory_store instead.',
     {
       content: z.string().describe('The content to write. If section is specified, this replaces only that section body.'),
       section: z.optional(z.string()).describe('Optional markdown heading (e.g., "## Preferences") to update a specific section. If omitted, replaces the entire file.'),
