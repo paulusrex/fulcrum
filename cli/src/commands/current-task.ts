@@ -124,7 +124,7 @@ async function findCurrentTask(client: FulcrumClient, pathOverride?: string) {
   return task
 }
 
-async function handleCurrentTaskCommand(
+export async function handleCurrentTaskCommand(
   action: string | undefined,
   rest: string[],
   flags: Record<string, string>
@@ -290,7 +290,7 @@ const currentTaskLinkCommand = defineCommand({
   meta: { name: 'link', description: 'Manage task links' },
   args: {
     ...globalArgs,
-    url: { type: 'positional' as const, description: 'URL to add (or --remove <id>)' },
+    linkUrl: { type: 'positional' as const, description: 'URL to add (or --remove <id>)' },
     label: { type: 'string' as const, description: 'Display label for the link' },
     remove: { type: 'string' as const, alias: 'r', description: 'Remove link by URL or ID' },
     path: { type: 'string' as const, description: 'Path override (default: cwd)' },
@@ -300,8 +300,8 @@ const currentTaskLinkCommand = defineCommand({
     const rest: string[] = []
     if (args.remove) {
       rest.push('--remove', args.remove as string)
-    } else if (args.url) {
-      rest.push(args.url as string)
+    } else if (args.linkUrl) {
+      rest.push(args.linkUrl as string)
     }
     await handleCurrentTaskCommand('link', rest, toFlags(args))
   },
