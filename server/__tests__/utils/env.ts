@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { resetDatabase } from '../../db'
 import { resetLogFilePath } from '../../lib/logger'
 import { resetDtachService } from '../../terminal/dtach-service'
+import { clearFnoxCache } from '../../lib/settings'
 
 /**
  * Creates an isolated test environment with its own FULCRUM_DIR.
@@ -25,6 +26,9 @@ export function setupTestEnv(): TestEnv {
   // This is critical for test isolation when Bun runs multiple test files
   resetDatabase()
 
+  // Clear fnox in-memory config cache for test isolation
+  clearFnoxCache()
+
   const fulcrumDir = mkdtempSync(join(tmpdir(), 'fulcrum-test-'))
 
   // Store original env values
@@ -41,6 +45,9 @@ export function setupTestEnv(): TestEnv {
   return {
     fulcrumDir,
     cleanup: () => {
+      // Clear fnox cache to prevent cross-test pollution
+      clearFnoxCache()
+
       // Reset database first (closes connections)
       resetDatabase()
 

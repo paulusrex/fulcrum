@@ -1,10 +1,9 @@
-import * as fs from 'fs'
 import { log } from '../logger'
 import {
   CURRENT_SCHEMA_VERSION,
   DEFAULT_SETTINGS,
-  MIGRATION_MAP,
   VALID_SETTING_PATHS,
+  MIGRATION_MAP,
   type ClaudeCodeTheme,
   type EditorApp,
   type LegacySettings,
@@ -12,135 +11,131 @@ import {
   type AssistantProvider,
   type AssistantModel,
   type ChannelsSettings,
-  type CalDavSettings,
   type RitualConfig,
 } from './types'
 import type { AgentType } from '@shared/types'
-import { ensureFulcrumDir, expandPath, getSettingsPath } from './paths'
+import { ensureFulcrumDir, expandPath } from './paths'
 import {
   getNestedValue,
-  setNestedValue,
-  migrateSettings,
-  migrateTaskType,
-  deepMergeWithDefaults,
 } from './migration'
-import { DEFAULT_NOTIFICATION_SETTINGS } from './notifications'
-import { DEFAULT_ZAI_SETTINGS } from './zai'
+import { migrateSettingsJsonToFnox } from './migrate-to-fnox'
+import {
+  getFnoxValue,
+  isFnoxAvailable,
+  isSecretPath,
+  setFnoxValue,
+  FNOX_CONFIG_MAP,
+} from './fnox'
 
-// Ensure settings file exists with defaults
-export function ensureSettingsFile(): void {
-  const settingsPath = getSettingsPath()
-  if (!fs.existsSync(settingsPath)) {
-    fs.writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8')
-  }
-}
-
-// Get settings (with defaults, running migration if needed)
-// Precedence: env var → settings.json → default
+// Get settings — reads all values from fnox cache with defaults fallback
+// Precedence: env var > fnox > default
 export function getSettings(): Settings {
   ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
 
-  let parsed: Record<string, unknown> = {}
+  const fv = (path: string): unknown => getFnoxValue(path)
 
-  if (fs.existsSync(settingsPath)) {
-    try {
-      const content = fs.readFileSync(settingsPath, 'utf-8')
-      parsed = JSON.parse(content)
-    } catch {
-      // Use empty parsed if file is invalid
-    }
-  }
-
-  // Run migration if needed
-  const migrationResult = migrateSettings(parsed)
-  if (migrationResult.migrated) {
-    if (migrationResult.migratedKeys.length > 0) {
-      log.settings.info('Migrated settings to nested structure', {
-        migratedKeys: migrationResult.migratedKeys,
-      })
-    }
-    if (migrationResult.warnings.length > 0) {
-      log.settings.warn('Settings migration warnings', {
-        warnings: migrationResult.warnings,
-      })
-    }
-    // Write migrated settings back to file
-    fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
-  }
-
-  // Build settings from nested structure with defaults
-  const fileSettings: Settings = {
+  const settings: Settings = {
     _schemaVersion: CURRENT_SCHEMA_VERSION,
     server: {
-      port: (parsed.server as Record<string, unknown>)?.port as number ?? DEFAULT_SETTINGS.server.port,
+      port: (fv('server.port') as number) ?? DEFAULT_SETTINGS.server.port,
     },
     paths: {
       defaultGitReposDir: expandPath(
-        ((parsed.paths as Record<string, unknown>)?.defaultGitReposDir as string) ?? DEFAULT_SETTINGS.paths.defaultGitReposDir
+        (fv('paths.defaultGitReposDir') as string) ?? DEFAULT_SETTINGS.paths.defaultGitReposDir
       ),
     },
     editor: {
-      app: ((parsed.editor as Record<string, unknown>)?.app as EditorApp) ?? DEFAULT_SETTINGS.editor.app,
-      host: ((parsed.editor as Record<string, unknown>)?.host as string) ?? DEFAULT_SETTINGS.editor.host,
-      sshPort: ((parsed.editor as Record<string, unknown>)?.sshPort as number) ?? DEFAULT_SETTINGS.editor.sshPort,
+      app: (fv('editor.app') as EditorApp) ?? DEFAULT_SETTINGS.editor.app,
+      host: (fv('editor.host') as string) ?? DEFAULT_SETTINGS.editor.host,
+      sshPort: (fv('editor.sshPort') as number) ?? DEFAULT_SETTINGS.editor.sshPort,
     },
     integrations: {
-      githubPat: ((parsed.integrations as Record<string, unknown>)?.githubPat as string | null) ?? null,
-      cloudflareApiToken: ((parsed.integrations as Record<string, unknown>)?.cloudflareApiToken as string | null) ?? null,
-      cloudflareAccountId: ((parsed.integrations as Record<string, unknown>)?.cloudflareAccountId as string | null) ?? null,
-      googleClientId: ((parsed.integrations as Record<string, unknown>)?.googleClientId as string | null) ?? null,
-      googleClientSecret: ((parsed.integrations as Record<string, unknown>)?.googleClientSecret as string | null) ?? null,
+      githubPat: (fv('integrations.githubPat') as string | null) ?? null,
+      cloudflareApiToken: (fv('integrations.cloudflareApiToken') as string | null) ?? null,
+      cloudflareAccountId: (fv('integrations.cloudflareAccountId') as string | null) ?? null,
+      googleClientId: (fv('integrations.googleClientId') as string | null) ?? null,
+      googleClientSecret: (fv('integrations.googleClientSecret') as string | null) ?? null,
     },
     agent: {
-      defaultAgent: ((parsed.agent as Record<string, unknown>)?.defaultAgent as AgentType) ?? DEFAULT_SETTINGS.agent.defaultAgent,
-      opencodeModel: ((parsed.agent as Record<string, unknown>)?.opencodeModel as string | null) ?? null,
-      opencodeDefaultAgent: ((parsed.agent as Record<string, unknown>)?.opencodeDefaultAgent as string) ?? DEFAULT_SETTINGS.agent.opencodeDefaultAgent,
-      opencodePlanAgent: ((parsed.agent as Record<string, unknown>)?.opencodePlanAgent as string) ?? DEFAULT_SETTINGS.agent.opencodePlanAgent,
-      autoScrollToBottom: ((parsed.agent as Record<string, unknown>)?.autoScrollToBottom as boolean) ?? DEFAULT_SETTINGS.agent.autoScrollToBottom,
-      claudeCodePath: ((parsed.agent as Record<string, unknown>)?.claudeCodePath as string | null) ?? DEFAULT_SETTINGS.agent.claudeCodePath,
+      defaultAgent: (fv('agent.defaultAgent') as AgentType) ?? DEFAULT_SETTINGS.agent.defaultAgent,
+      opencodeModel: (fv('agent.opencodeModel') as string | null) ?? null,
+      opencodeDefaultAgent: (fv('agent.opencodeDefaultAgent') as string) ?? DEFAULT_SETTINGS.agent.opencodeDefaultAgent,
+      opencodePlanAgent: (fv('agent.opencodePlanAgent') as string) ?? DEFAULT_SETTINGS.agent.opencodePlanAgent,
+      autoScrollToBottom: (fv('agent.autoScrollToBottom') as boolean | null) ?? DEFAULT_SETTINGS.agent.autoScrollToBottom,
+      claudeCodePath: (fv('agent.claudeCodePath') as string | null) ?? DEFAULT_SETTINGS.agent.claudeCodePath,
     },
     tasks: {
-      // Migrate old 'code'/'non-code'/'non-worktree'/'standalone' values
-      defaultTaskType: migrateTaskType((parsed.tasks as Record<string, unknown>)?.defaultTaskType as string) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
-      startWorktreeTasksImmediately: ((parsed.tasks as Record<string, unknown>)?.startWorktreeTasksImmediately as boolean) ?? ((parsed.tasks as Record<string, unknown>)?.startCodeTasksImmediately as boolean) ?? DEFAULT_SETTINGS.tasks.startWorktreeTasksImmediately,
+      defaultTaskType: (fv('tasks.defaultTaskType') as Settings['tasks']['defaultTaskType']) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
+      startWorktreeTasksImmediately: (fv('tasks.startWorktreeTasksImmediately') as boolean | null) ?? DEFAULT_SETTINGS.tasks.startWorktreeTasksImmediately,
     },
     appearance: {
-      language: ((parsed.appearance as Record<string, unknown>)?.language as 'en' | 'zh' | null) ?? null,
-      theme: ((parsed.appearance as Record<string, unknown>)?.theme as 'system' | 'light' | 'dark' | null) ?? null,
-      timezone: ((parsed.appearance as Record<string, unknown>)?.timezone as string | null) ?? null,
-      syncClaudeCodeTheme: ((parsed.appearance as Record<string, unknown>)?.syncClaudeCodeTheme as boolean) ?? false,
-      claudeCodeLightTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeLightTheme as ClaudeCodeTheme) ?? 'light-ansi',
-      claudeCodeDarkTheme: ((parsed.appearance as Record<string, unknown>)?.claudeCodeDarkTheme as ClaudeCodeTheme) ?? 'dark-ansi',
+      language: (fv('appearance.language') as 'en' | 'zh' | null) ?? null,
+      theme: (fv('appearance.theme') as 'system' | 'light' | 'dark' | null) ?? null,
+      timezone: (fv('appearance.timezone') as string | null) ?? null,
+      syncClaudeCodeTheme: (fv('appearance.syncClaudeCodeTheme') as boolean | null) ?? false,
+      claudeCodeLightTheme: (fv('appearance.claudeCodeLightTheme') as ClaudeCodeTheme) ?? DEFAULT_SETTINGS.appearance.claudeCodeLightTheme,
+      claudeCodeDarkTheme: (fv('appearance.claudeCodeDarkTheme') as ClaudeCodeTheme) ?? DEFAULT_SETTINGS.appearance.claudeCodeDarkTheme,
     },
     assistant: {
-      provider: ((parsed.assistant as Record<string, unknown>)?.provider as AssistantProvider) ?? DEFAULT_SETTINGS.assistant.provider,
-      model: ((parsed.assistant as Record<string, unknown>)?.model as AssistantModel) ?? DEFAULT_SETTINGS.assistant.model,
-      observerModel: ((parsed.assistant as Record<string, unknown>)?.observerModel as AssistantModel) ?? DEFAULT_SETTINGS.assistant.observerModel,
-      observerProvider: ((parsed.assistant as Record<string, unknown>)?.observerProvider as AssistantProvider | null) ?? DEFAULT_SETTINGS.assistant.observerProvider,
-      observerOpencodeModel: ((parsed.assistant as Record<string, unknown>)?.observerOpencodeModel as string | null) ?? DEFAULT_SETTINGS.assistant.observerOpencodeModel,
-      customInstructions: ((parsed.assistant as Record<string, unknown>)?.customInstructions as string | null) ?? null,
+      provider: (fv('assistant.provider') as AssistantProvider) ?? DEFAULT_SETTINGS.assistant.provider,
+      model: (fv('assistant.model') as AssistantModel) ?? DEFAULT_SETTINGS.assistant.model,
+      observerModel: (fv('assistant.observerModel') as AssistantModel) ?? DEFAULT_SETTINGS.assistant.observerModel,
+      observerProvider: (fv('assistant.observerProvider') as AssistantProvider | null) ?? DEFAULT_SETTINGS.assistant.observerProvider,
+      observerOpencodeModel: (fv('assistant.observerOpencodeModel') as string | null) ?? DEFAULT_SETTINGS.assistant.observerOpencodeModel,
+      customInstructions: (fv('assistant.customInstructions') as string | null) ?? null,
       documentsDir: expandPath(
-        ((parsed.assistant as Record<string, unknown>)?.documentsDir as string) ?? DEFAULT_SETTINGS.assistant.documentsDir
+        (fv('assistant.documentsDir') as string) ?? DEFAULT_SETTINGS.assistant.documentsDir
       ),
-      ritualsEnabled: ((parsed.assistant as Record<string, unknown>)?.ritualsEnabled as boolean) ?? DEFAULT_SETTINGS.assistant.ritualsEnabled,
-      morningRitual: deepMergeWithDefaults(
-        ((parsed.assistant as Record<string, unknown>)?.morningRitual as Record<string, unknown>) ?? {},
-        DEFAULT_SETTINGS.assistant.morningRitual as unknown as Record<string, unknown>
-      ) as RitualConfig,
-      eveningRitual: deepMergeWithDefaults(
-        ((parsed.assistant as Record<string, unknown>)?.eveningRitual as Record<string, unknown>) ?? {},
-        DEFAULT_SETTINGS.assistant.eveningRitual as unknown as Record<string, unknown>
-      ) as RitualConfig,
+      ritualsEnabled: (fv('assistant.ritualsEnabled') as boolean | null) ?? DEFAULT_SETTINGS.assistant.ritualsEnabled,
+      morningRitual: {
+        time: (fv('assistant.morningRitual.time') as string) ?? DEFAULT_SETTINGS.assistant.morningRitual.time,
+        prompt: (fv('assistant.morningRitual.prompt') as string) ?? DEFAULT_SETTINGS.assistant.morningRitual.prompt,
+      } as RitualConfig,
+      eveningRitual: {
+        time: (fv('assistant.eveningRitual.time') as string) ?? DEFAULT_SETTINGS.assistant.eveningRitual.time,
+        prompt: (fv('assistant.eveningRitual.prompt') as string) ?? DEFAULT_SETTINGS.assistant.eveningRitual.prompt,
+      } as RitualConfig,
     },
-    channels: deepMergeWithDefaults(
-      (parsed.channels as Record<string, unknown>) ?? {},
-      DEFAULT_SETTINGS.channels as unknown as Record<string, unknown>
-    ) as ChannelsSettings,
-    caldav: deepMergeWithDefaults(
-      (parsed.caldav as Record<string, unknown>) ?? {},
-      DEFAULT_SETTINGS.caldav as unknown as Record<string, unknown>
-    ) as CalDavSettings,
+    channels: {
+      email: {
+        enabled: (fv('channels.email.enabled') as boolean | null) ?? DEFAULT_SETTINGS.channels.email.enabled,
+        backend: (fv('channels.email.backend') as ChannelsSettings['email']['backend']) ?? DEFAULT_SETTINGS.channels.email.backend,
+        googleAccountId: (fv('channels.email.googleAccountId') as string | null) ?? DEFAULT_SETTINGS.channels.email.googleAccountId,
+        imap: {
+          host: (fv('channels.email.imap.host') as string) ?? DEFAULT_SETTINGS.channels.email.imap.host,
+          port: (fv('channels.email.imap.port') as number) ?? DEFAULT_SETTINGS.channels.email.imap.port,
+          secure: (fv('channels.email.imap.secure') as boolean | null) ?? DEFAULT_SETTINGS.channels.email.imap.secure,
+          user: (fv('channels.email.imap.user') as string) ?? DEFAULT_SETTINGS.channels.email.imap.user,
+          password: (fv('channels.email.imap.password') as string) ?? DEFAULT_SETTINGS.channels.email.imap.password,
+        },
+        pollIntervalSeconds: (fv('channels.email.pollIntervalSeconds') as number) ?? DEFAULT_SETTINGS.channels.email.pollIntervalSeconds,
+      },
+      slack: {
+        enabled: (fv('channels.slack.enabled') as boolean | null) ?? DEFAULT_SETTINGS.channels.slack.enabled,
+        botToken: (fv('channels.slack.botToken') as string) ?? DEFAULT_SETTINGS.channels.slack.botToken,
+        appToken: (fv('channels.slack.appToken') as string) ?? DEFAULT_SETTINGS.channels.slack.appToken,
+      },
+      discord: {
+        enabled: (fv('channels.discord.enabled') as boolean | null) ?? DEFAULT_SETTINGS.channels.discord.enabled,
+        botToken: (fv('channels.discord.botToken') as string) ?? DEFAULT_SETTINGS.channels.discord.botToken,
+      },
+      telegram: {
+        enabled: (fv('channels.telegram.enabled') as boolean | null) ?? DEFAULT_SETTINGS.channels.telegram.enabled,
+        botToken: (fv('channels.telegram.botToken') as string) ?? DEFAULT_SETTINGS.channels.telegram.botToken,
+      },
+    },
+    caldav: {
+      enabled: (fv('caldav.enabled') as boolean | null) ?? DEFAULT_SETTINGS.caldav.enabled,
+      syncIntervalMinutes: (fv('caldav.syncIntervalMinutes') as number) ?? DEFAULT_SETTINGS.caldav.syncIntervalMinutes,
+      // Legacy fields — kept for type compat, defaults only
+      serverUrl: DEFAULT_SETTINGS.caldav.serverUrl,
+      username: DEFAULT_SETTINGS.caldav.username,
+      password: DEFAULT_SETTINGS.caldav.password,
+      authType: DEFAULT_SETTINGS.caldav.authType,
+      googleClientId: DEFAULT_SETTINGS.caldav.googleClientId,
+      googleClientSecret: DEFAULT_SETTINGS.caldav.googleClientSecret,
+      oauthTokens: DEFAULT_SETTINGS.caldav.oauthTokens,
+    },
   }
 
   // Apply environment variable overrides
@@ -148,33 +143,33 @@ export function getSettings(): Settings {
   const editorSshPortEnv = parseInt(process.env.FULCRUM_SSH_PORT || '', 10)
 
   return {
-    ...fileSettings,
+    ...settings,
     server: {
-      port: !isNaN(portEnv) && portEnv > 0 ? portEnv : fileSettings.server.port,
+      port: !isNaN(portEnv) && portEnv > 0 ? portEnv : settings.server.port,
     },
     paths: {
       defaultGitReposDir: process.env.FULCRUM_GIT_REPOS_DIR
         ? expandPath(process.env.FULCRUM_GIT_REPOS_DIR)
-        : fileSettings.paths.defaultGitReposDir,
+        : settings.paths.defaultGitReposDir,
     },
     editor: {
-      app: fileSettings.editor.app,
-      host: process.env.FULCRUM_EDITOR_HOST ?? fileSettings.editor.host,
-      sshPort: !isNaN(editorSshPortEnv) && editorSshPortEnv > 0 ? editorSshPortEnv : fileSettings.editor.sshPort,
+      app: settings.editor.app,
+      host: process.env.FULCRUM_EDITOR_HOST ?? settings.editor.host,
+      sshPort: !isNaN(editorSshPortEnv) && editorSshPortEnv > 0 ? editorSshPortEnv : settings.editor.sshPort,
     },
     integrations: {
-      githubPat: process.env.GITHUB_PAT ?? fileSettings.integrations.githubPat,
-      cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? fileSettings.integrations.cloudflareApiToken,
-      cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? fileSettings.integrations.cloudflareAccountId,
-      googleClientId: process.env.GOOGLE_CLIENT_ID ?? fileSettings.integrations.googleClientId,
-      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? fileSettings.integrations.googleClientSecret,
+      githubPat: process.env.GITHUB_PAT ?? settings.integrations.githubPat,
+      cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN ?? settings.integrations.cloudflareApiToken,
+      cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID ?? settings.integrations.cloudflareAccountId,
+      googleClientId: process.env.GOOGLE_CLIENT_ID ?? settings.integrations.googleClientId,
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? settings.integrations.googleClientSecret,
     },
-    agent: fileSettings.agent,
-    tasks: fileSettings.tasks,
-    appearance: fileSettings.appearance,
-    assistant: fileSettings.assistant,
-    channels: fileSettings.channels,
-    caldav: fileSettings.caldav,
+    agent: settings.agent,
+    tasks: settings.tasks,
+    appearance: settings.appearance,
+    assistant: settings.assistant,
+    channels: settings.channels,
+    caldav: settings.caldav,
   }
 }
 
@@ -211,7 +206,7 @@ export function isDeveloperMode(): boolean {
   return process.env.FULCRUM_DEVELOPER === '1' || process.env.FULCRUM_DEVELOPER === 'true'
 }
 
-// Update a setting by dot-notation path
+// Update a setting by dot-notation path — writes to fnox
 // Throws an error if the path is not a known valid setting path
 export function updateSettingByPath(settingPath: string, value: unknown): Settings {
   // Validate that the path is a known setting
@@ -220,26 +215,23 @@ export function updateSettingByPath(settingPath: string, value: unknown): Settin
   }
 
   ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
 
-  let parsed: Record<string, unknown> = {}
-  if (fs.existsSync(settingsPath)) {
-    try {
-      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-    } catch {
-      // Use empty if invalid
+  // Get old value for logging
+  const oldSettings = getSettings()
+  const oldValue = getNestedValue(oldSettings as unknown as Record<string, unknown>, settingPath)
+
+  // Write to fnox (updates in-memory cache; writes to CLI only when available)
+  const entry = FNOX_CONFIG_MAP[settingPath]
+  if (entry) {
+    if (value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
+      setFnoxValue(settingPath, null)
+    } else {
+      setFnoxValue(settingPath, value)
     }
   }
 
-  const oldValue = getNestedValue(parsed, settingPath)
-  setNestedValue(parsed, settingPath, value)
-  parsed._schemaVersion = CURRENT_SCHEMA_VERSION
-
-  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
-
   // Log setting change (mask sensitive values)
-  const sensitiveKeys = ['githubPat', 'cloudflareApiToken', 'apiKey']
-  const isSensitive = sensitiveKeys.some(key => settingPath.includes(key))
+  const isSensitive = isSecretPath(settingPath)
   const logValue = isSensitive ? '***' : value
   const logOldValue = isSensitive ? '***' : oldValue
   if (oldValue !== value) {
@@ -251,38 +243,23 @@ export function updateSettingByPath(settingPath: string, value: unknown): Settin
 
 // Update settings (partial update using legacy keys for backward compatibility)
 export function updateSettings(updates: Partial<LegacySettings>): Settings {
-  ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
-
-  let parsed: Record<string, unknown> = {}
-  if (fs.existsSync(settingsPath)) {
-    try {
-      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-    } catch {
-      // Use empty if invalid
-    }
-  }
-
-  // Map legacy keys to nested paths and update
   for (const [key, value] of Object.entries(updates)) {
     if (value !== undefined) {
       const nestedPath = MIGRATION_MAP[key]
-      if (nestedPath) {
-        setNestedValue(parsed, nestedPath, value)
+      if (nestedPath && VALID_SETTING_PATHS.has(nestedPath)) {
+        updateSettingByPath(nestedPath, value)
       }
     }
   }
 
-  parsed._schemaVersion = CURRENT_SCHEMA_VERSION
-  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
-
   return getSettings()
 }
 
-// Reset settings to defaults
+// Reset settings to defaults — clears all fnox keys (cache + CLI) and returns defaults
 export function resetSettings(): Settings {
-  ensureFulcrumDir()
-  fs.writeFileSync(getSettingsPath(), JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf-8')
+  for (const settingsPath of Object.keys(FNOX_CONFIG_MAP)) {
+    setFnoxValue(settingsPath, null)
+  }
   return { ...DEFAULT_SETTINGS }
 }
 
@@ -291,81 +268,28 @@ export function getDefaultValue(settingPath: string): unknown {
   return getNestedValue(DEFAULT_SETTINGS as unknown as Record<string, unknown>, settingPath)
 }
 
-// Ensure settings file is up-to-date with latest schema
+// Ensure config is up-to-date on server startup
 // Called on server startup to:
-// 1. Run migrations for old flat settings
-// 2. Add any missing keys with default values
-// 3. Set schema version to current
-// 4. Write back to file
-export function ensureLatestSettings(): void {
+// 1. Migrate settings.json if it exists (handled by migrate-to-fnox.ts)
+// 2. Set schema version
+export function ensureLatestConfig(): void {
   ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
 
-  let parsed: Record<string, unknown> = {}
-  if (fs.existsSync(settingsPath)) {
-    try {
-      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-    } catch {
-      // Use empty if invalid
-    }
+  if (isFnoxAvailable()) {
+    // Run settings.json → fnox migration if settings.json exists
+    migrateSettingsJsonToFnox()
+
+    // Ensure schema version is set
+    setFnoxValue('_schemaVersion', CURRENT_SCHEMA_VERSION)
   }
 
-  // Capture original notifications.enabled before any changes
-  const originalNotificationsEnabled = (parsed.notifications as Record<string, unknown>)?.enabled
+  log.settings.info('Config initialized', { schemaVersion: CURRENT_SCHEMA_VERSION })
+}
 
-  // Run flat→nested migration if needed
-  migrateSettings(parsed)
+// Backward-compatible alias
+export const ensureLatestSettings = ensureLatestConfig
 
-  // Deep merge with default settings, preserving user values
-  const merged = deepMergeWithDefaults(parsed, DEFAULT_SETTINGS as unknown as Record<string, unknown>)
-
-  // Ensure notifications section exists with defaults
-  if (!merged.notifications || typeof merged.notifications !== 'object') {
-    merged.notifications = { ...DEFAULT_NOTIFICATION_SETTINGS }
-  } else {
-    merged.notifications = deepMergeWithDefaults(
-      merged.notifications as Record<string, unknown>,
-      DEFAULT_NOTIFICATION_SETTINGS as unknown as Record<string, unknown>
-    )
-  }
-
-  // Log if notifications.enabled changed during normalization
-  const mergedNotificationsEnabled = (merged.notifications as Record<string, unknown>)?.enabled
-  if (originalNotificationsEnabled !== mergedNotificationsEnabled) {
-    log.settings.warn('Notification enabled state changed during settings normalization', {
-      from: originalNotificationsEnabled,
-      to: mergedNotificationsEnabled,
-      reason: originalNotificationsEnabled === undefined ? 'missing key, using default' : 'value changed during merge',
-    })
-  }
-
-  // Ensure zai section exists with defaults
-  if (!merged.zai || typeof merged.zai !== 'object') {
-    merged.zai = { ...DEFAULT_ZAI_SETTINGS }
-  } else {
-    merged.zai = deepMergeWithDefaults(
-      merged.zai as Record<string, unknown>,
-      DEFAULT_ZAI_SETTINGS as unknown as Record<string, unknown>
-    )
-  }
-
-  // Migrate deployment.cloudflareApiToken to integrations.cloudflareApiToken
-  if (merged.deployment && typeof merged.deployment === 'object') {
-    const deployment = merged.deployment as Record<string, unknown>
-    if (deployment.cloudflareApiToken && !((merged.integrations as Record<string, unknown>)?.cloudflareApiToken)) {
-      const integrations = (merged.integrations as Record<string, unknown>) ?? {}
-      integrations.cloudflareApiToken = deployment.cloudflareApiToken
-      merged.integrations = integrations
-      log.settings.info('Migrated cloudflareApiToken from deployment to integrations')
-    }
-    // Remove the deployment section entirely
-    delete merged.deployment
-  }
-
-  // Always set to current schema version
-  merged._schemaVersion = CURRENT_SCHEMA_VERSION
-
-  // Write back to file
-  fs.writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf-8')
-  log.settings.info('Settings normalized to latest schema', { schemaVersion: CURRENT_SCHEMA_VERSION })
+// No-op for backward compat — fnox doesn't need a settings file
+export function ensureSettingsFile(): void {
+  // No-op: settings.json is no longer used
 }

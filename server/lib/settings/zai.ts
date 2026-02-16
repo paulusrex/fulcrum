@@ -1,9 +1,5 @@
-import * as fs from 'fs'
 import type { ZAiSettings } from './types'
-import { ensureFulcrumDir, getSettingsPath } from './paths'
-
-// ==================== z.ai Settings ====================
-// These settings control the z.ai proxy integration for Claude Code
+import { getFnoxValue, setFnoxValue } from './fnox'
 
 export const DEFAULT_ZAI_SETTINGS: ZAiSettings = {
   enabled: false,
@@ -13,50 +9,21 @@ export const DEFAULT_ZAI_SETTINGS: ZAiSettings = {
   opusModel: 'glm-4.7',
 }
 
-// Get z.ai settings from settings.json
+// Get z.ai settings from fnox
 export function getZAiSettings(): ZAiSettings {
-  ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
+  const fv = (path: string): unknown => getFnoxValue(path)
 
-  if (!fs.existsSync(settingsPath)) {
-    return DEFAULT_ZAI_SETTINGS
-  }
-
-  try {
-    const content = fs.readFileSync(settingsPath, 'utf-8')
-    const parsed = JSON.parse(content)
-    const zai = parsed.zai as Partial<ZAiSettings> | undefined
-
-    if (!zai) {
-      return DEFAULT_ZAI_SETTINGS
-    }
-
-    return {
-      enabled: zai.enabled ?? false,
-      apiKey: zai.apiKey ?? null,
-      haikuModel: zai.haikuModel ?? DEFAULT_ZAI_SETTINGS.haikuModel,
-      sonnetModel: zai.sonnetModel ?? DEFAULT_ZAI_SETTINGS.sonnetModel,
-      opusModel: zai.opusModel ?? DEFAULT_ZAI_SETTINGS.opusModel,
-    }
-  } catch {
-    return DEFAULT_ZAI_SETTINGS
+  return {
+    enabled: (fv('zai.enabled') as boolean | null) ?? DEFAULT_ZAI_SETTINGS.enabled,
+    apiKey: (fv('zai.apiKey') as string | null) ?? null,
+    haikuModel: (fv('zai.haikuModel') as string) ?? DEFAULT_ZAI_SETTINGS.haikuModel,
+    sonnetModel: (fv('zai.sonnetModel') as string) ?? DEFAULT_ZAI_SETTINGS.sonnetModel,
+    opusModel: (fv('zai.opusModel') as string) ?? DEFAULT_ZAI_SETTINGS.opusModel,
   }
 }
 
-// Update z.ai settings
+// Update z.ai settings — writes to fnox
 export function updateZAiSettings(updates: Partial<ZAiSettings>): ZAiSettings {
-  ensureFulcrumDir()
-  const settingsPath = getSettingsPath()
-
-  let parsed: Record<string, unknown> = {}
-  if (fs.existsSync(settingsPath)) {
-    try {
-      parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
-    } catch {
-      // Use empty if invalid
-    }
-  }
-
   const current = getZAiSettings()
   const updated: ZAiSettings = {
     enabled: updates.enabled ?? current.enabled,
@@ -66,8 +33,12 @@ export function updateZAiSettings(updates: Partial<ZAiSettings>): ZAiSettings {
     opusModel: updates.opusModel ?? current.opusModel,
   }
 
-  parsed.zai = updated
-  fs.writeFileSync(settingsPath, JSON.stringify(parsed, null, 2), 'utf-8')
+  setFnoxValue('zai.enabled', updated.enabled)
+  setFnoxValue('zai.apiKey', updated.apiKey)
+  setFnoxValue('zai.haikuModel', updated.haikuModel)
+  setFnoxValue('zai.sonnetModel', updated.sonnetModel)
+  setFnoxValue('zai.opusModel', updated.opusModel)
 
-  return updated
+  // Return the full settings for the caller
+  return getZAiSettings()
 }

@@ -90,7 +90,13 @@ export function getDataModel(): string {
 - Content with optional tags for categorization
 - SQLite FTS5 full-text search (boolean operators, phrase matching, prefix queries)
 - Used to remember facts, preferences, decisions, and patterns across conversations
-- Browsable via Monitoring > Memory tab in the UI`
+- Browsable via Monitoring > Memory tab in the UI
+
+**Observer Invocations** - Tracks observe-only message processing
+- Records every observe-only processing attempt (non-self WhatsApp messages, unauthorized emails)
+- Tracks channel type, sender, provider, status, actions taken (tasks created, memories stored)
+- Circuit breaker status monitoring
+- Browsable via Monitoring > Observer tab in the UI`
 }
 
 /**
@@ -496,9 +502,25 @@ update_setting key="editor.app" value="cursor"
 list_settings
 \`\`\`
 
+### Configuration Storage (fnox)
+
+All Fulcrum configuration is stored in \`~/.fulcrum/fnox.toml\` using fnox. This is the single source of truth for ~80 settings.
+
+**Architecture:**
+- Non-sensitive values (server.port, editor.app, appearance.theme, etc.) use the \`plain\` provider
+- Sensitive values (API keys, tokens, webhook URLs) use the \`age\` provider (encrypted)
+- In-memory cache loaded at startup via \`fnox export\` for fast access
+- Settings precedence: environment variable > fnox > default
+- No more \`settings.json\`, \`notifications.json\`, or \`zai.json\` files
+
+**Migration:**
+- Existing settings files are automatically migrated to fnox on server start
+- Old files are renamed to \`.migrated\` (e.g., \`settings.json.migrated\`) after successful migration
+- The age encryption key is at \`~/.fulcrum/age.txt\` (generated automatically on first \`fulcrum up\`)
+
 ### Important Notes
 
-- Sensitive values (API tokens, webhooks) are masked when displayed
+- Sensitive values (API tokens, webhooks) are encrypted with fnox and masked when displayed
 - Use \`reset_setting\` to restore any setting to its default
 - Changes take effect immediately
 - Some settings (like server.port) require a server restart to take effect`

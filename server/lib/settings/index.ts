@@ -60,6 +60,7 @@ export {
   resetSettings,
   getDefaultValue,
   ensureLatestSettings,
+  ensureLatestConfig,
 } from './core'
 
 // Notification settings
@@ -83,14 +84,29 @@ export {
   updateZAiSettings,
 } from './zai'
 
-// initializeFulcrumDirectories needs to include ensureSettingsFile
-// We import from paths and core, then export a combined function
+// fnox config management
+export {
+  isFnoxAvailable,
+  isSecretPath,
+  getFnoxSecret,
+  setFnoxSecret,
+  removeFnoxSecret,
+  getFnoxValue,
+  setFnoxValue,
+  initFnoxConfig,
+  initFnoxSecrets,
+  getFnoxConfigCount,
+  getFnoxSecretCount,
+  FNOX_CONFIG_MAP,
+  FNOX_SECRET_MAP,
+  clearFnoxCache,
+} from './fnox'
+
+// initializeFulcrumDirectories
 import { ensureFulcrumDir, ensureWorktreesDir } from './paths'
-import { ensureSettingsFile } from './core'
 
 // Initialize all required directories and files
 export function initializeFulcrumDirectories(): void {
   ensureFulcrumDir()
-  ensureSettingsFile()
   ensureWorktreesDir()
 }

@@ -7,7 +7,7 @@ import {
   broadcast,
   broadcastToTerminal,
 } from './websocket/terminal-ws'
-import { ensureLatestSettings, getSettingByKey } from './lib/settings'
+import { ensureLatestConfig, getSettingByKey, initFnoxConfig } from './lib/settings'
 import { startPRMonitor, stopPRMonitor } from './services/pr-monitor'
 import { startMetricsCollector, stopMetricsCollector } from './services/metrics-collector'
 import { startGitWatcher, stopGitWatcher } from './services/git-watcher'
@@ -21,8 +21,11 @@ import { clearSensitiveEnvVars } from './lib/env'
 // Clear sensitive env vars inherited from parent shell before reading settings
 clearSensitiveEnvVars()
 
-// Ensure settings file is up-to-date with latest schema on startup
-ensureLatestSettings()
+// Initialize fnox config cache (must happen before ensureLatestConfig for migration)
+initFnoxConfig()
+
+// Ensure config is up-to-date (runs settings.json → fnox migration if needed)
+ensureLatestConfig()
 
 const PORT = getSettingByKey('port')
 const HOST = process.env.HOST || 'localhost'
