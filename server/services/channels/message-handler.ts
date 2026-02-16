@@ -19,6 +19,8 @@ import {
   skipInvocation,
 } from '../observer-tracking'
 import type { ObserverActionRecord } from '../../db/schema'
+import { db, tasks } from '../../db'
+import { desc } from 'drizzle-orm'
 import type { IncomingMessage } from './types'
 
 // Internal deps - exposed for test replacement (avoids unreliable mock.module)
@@ -547,6 +549,19 @@ async function processObserveOnlyMessage(msg: IncomingMessage): Promise<void> {
     }
   }
 
+  // Fetch recent open tasks for duplicate prevention context
+  let recentTasks: Array<{ id: string; title: string; status: string }> = []
+  try {
+    const allTasks = db.select({ id: tasks.id, title: tasks.title, status: tasks.status, createdAt: tasks.createdAt })
+      .from(tasks)
+      .orderBy(desc(tasks.createdAt))
+      .all()
+    recentTasks = allTasks
+      .filter(t => t.status === 'TO_DO' || t.status === 'IN_PROGRESS')
+      .slice(0, 10)
+      .map(t => ({ id: t.id, title: t.title, status: t.status }))
+  } catch { /* non-fatal */ }
+
   // Fetch recent channel messages for context (skip email — too noisy/threaded)
   const channelHistory = msg.channelType !== 'email'
     ? getRecentChannelMessages(msg.connectionId, {
@@ -584,6 +599,7 @@ async function processObserveOnlyMessage(msg: IncomingMessage): Promise<void> {
         senderId: msg.senderId,
         senderName: msg.senderName,
         channelHistory,
+        recentTasks,
       })
 
       for await (const event of stream) {
@@ -628,7 +644,7 @@ async function processObserveOnlyMessage(msg: IncomingMessage): Promise<void> {
       isGroup: msg.metadata?.isGroup as boolean | undefined,
     },
   }
-  const systemPrompt = getObserveOnlySystemPrompt(msg.channelType, context)
+  const systemPrompt = getObserveOnlySystemPrompt(msg.channelType, context, recentTasks)
 
   try {
     let hadError = false

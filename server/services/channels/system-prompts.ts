@@ -72,7 +72,23 @@ ${formattingGuide}`
  * Used for messages the assistant can see but should not respond to
  * (e.g., WhatsApp messages not in self-chat).
  */
-export function getObserveOnlySystemPrompt(channelType: ChannelType, context: MessagingContext): string {
+export function getObserveOnlySystemPrompt(
+  channelType: ChannelType,
+  context: MessagingContext,
+  recentTasks?: Array<{ id: string; title: string; status: string }>,
+): string {
+  const recentTasksSection = recentTasks && recentTasks.length > 0
+    ? `## Recent Open Tasks
+
+${recentTasks.map(t => `- ${t.id}: ${t.title} [${t.status}]`).join('\n')}
+
+IMPORTANT: Before creating a new task, check this list. If a task already covers the same topic,
+update it (e.g., add details to description, set due date) instead of creating a duplicate.
+If there are duplicates, cancel the redundant ones with \`move_task\` to CANCELED.
+
+`
+    : ''
+
   return `## Observe-Only Mode
 
 You are the user's observer. Only create a task when the user must take a specific action or fulfill a commitment they might otherwise forget. Default to storing a memory or doing nothing — only escalate to a task when doing nothing would cause the user to miss something important. A frivolous task is worse than no task: it wastes the user's time and erodes trust.
@@ -87,12 +103,13 @@ ${(context.metadata as { isGroup?: boolean })?.isGroup ? `**Group Chat**: yes` :
 
 **DO NOT RESPOND** - You cannot send messages to this recipient. You are only observing.
 
-## Available Tools
+${recentTasksSection}## Available Tools
 
 ### Task tools
 - \`list_tasks\` - Search existing tasks (use to check for duplicates before creating)
 - \`create_task\` - Create a new task with title, description, tags, and dueDate
 - \`update_task\` - Update an existing task's title or description
+- \`move_task\` - Move a task to a different status (use to cancel duplicates or mark tasks done)
 - \`add_task_link\` - Add a URL link to a task
 - \`add_task_tag\` - Add a tag to an existing task
 - \`set_task_due_date\` - Set or update a task's due date
@@ -110,10 +127,12 @@ ${(context.metadata as { isGroup?: boolean })?.isGroup ? `**Group Chat**: yes` :
 
 Silently analyze this message and take the appropriate action:
 
-1. **The user must take a specific action or respond** (someone asks them to do something, they need to fulfill a commitment, a genuine deadline they must meet) → Use \`list_tasks\` to check for duplicates, then \`create_task\` with a clear title, description, relevant tags, and dueDate if mentioned. Tag with \`from:${context.channel}\`. After creating a task, use \`send_notification\` to alert the user.
-2. **Updates about existing matters** (new details on a known topic) → Use \`list_tasks\` to find the related task, then \`update_task\` or \`add_task_link\` as appropriate.
+1. **The user must take a specific action or respond** (someone asks them to do something, they need to fulfill a commitment, a genuine deadline they must meet) → Check Recent Open Tasks above. If a task already covers this topic, use \`update_task\` to add new details or \`set_task_due_date\` to update the due date. Only \`create_task\` if no existing task covers the topic. Tag new tasks with \`from:${context.channel}\`. After creating a NEW task, use \`send_notification\` to alert the user.
+2. **Updates about existing matters** (new details on a known topic) → Check Recent Open Tasks for a match, then \`update_task\` or \`add_task_link\` as appropriate.
 3. **Important persistent observations** (learning someone's name, recurring topics, key relationships) → \`memory_store\` with tag \`persistent\`
 4. **Everything else** (automated notifications, FYI messages, status updates, casual chat, spam) → Do nothing
+5. **Duplicate tasks visible in the list** → Use \`move_task\` to CANCELED on the redundant ones, keeping the most complete task.
+6. **Message indicates a task is done** (e.g., payment confirmed, document sent, meeting happened) → Use \`move_task\` to DONE on the matching task.
 
 ### Do NOT create tasks for:
 - Automated notifications (shipping updates, RSVP notifications, social media alerts, CI/CD results)

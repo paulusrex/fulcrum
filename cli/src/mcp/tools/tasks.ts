@@ -41,6 +41,12 @@ function registerListTasks(server: Server, client: Client) {
       overdue: z
         .optional(z.boolean())
         .describe('Only show overdue tasks (due date in past, not DONE/CANCELED)'),
+      sort: z
+        .optional(z.enum(['position', 'created', 'updated']))
+        .describe('Sort order: "position" (default), "created" (newest first), "updated" (most recently updated first)'),
+      limit: z
+        .optional(z.number().int().min(1).max(100))
+        .describe('Return only the first N results after filtering/sorting (1-100)'),
     },
     async ({
       status,
@@ -54,6 +60,8 @@ function registerListTasks(server: Server, client: Client) {
       dueDateStart,
       dueDateEnd,
       overdue,
+      sort,
+      limit,
     }) => {
       try {
         let tasks = await client.listTasks()
@@ -134,6 +142,16 @@ function registerListTasks(server: Server, client: Client) {
             (t) =>
               t.dueDate && t.dueDate < today && t.status !== 'DONE' && t.status !== 'CANCELED'
           )
+        }
+
+        if (sort === 'created') {
+          tasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        } else if (sort === 'updated') {
+          tasks.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        }
+
+        if (limit) {
+          tasks = tasks.slice(0, limit)
         }
 
         return formatSuccess(tasks)
@@ -351,6 +369,28 @@ function registerAddTaskTag(server: Server, client: Client) {
   )
 }
 
+function registerMoveTask(server: Server, client: Client) {
+  server.tool(
+    'move_task',
+    'Move a task to a different status column',
+    {
+      id: z.string().describe('Task ID'),
+      status: TaskStatusSchema.describe('Target status'),
+      position: z
+        .optional(z.number())
+        .describe('Position in the column (0-indexed, defaults to end)'),
+    },
+    async ({ id, status, position }) => {
+      try {
+        const task = await client.moveTask(id, status, position)
+        return formatSuccess(task)
+      } catch (err) {
+        return handleToolError(err)
+      }
+    }
+  )
+}
+
 function registerSetTaskDueDate(server: Server, client: Client) {
   server.tool(
     'set_task_due_date',
@@ -418,26 +458,7 @@ export const registerTaskTools: ToolRegistrar = (server, client) => {
     }
   )
 
-  // move_task
-  server.tool(
-    'move_task',
-    'Move a task to a different status column',
-    {
-      id: z.string().describe('Task ID'),
-      status: TaskStatusSchema.describe('Target status'),
-      position: z
-        .optional(z.number())
-        .describe('Position in the column (0-indexed, defaults to end)'),
-    },
-    async ({ id, status, position }) => {
-      try {
-        const task = await client.moveTask(id, status, position)
-        return formatSuccess(task)
-      } catch (err) {
-        return handleToolError(err)
-      }
-    }
-  )
+  registerMoveTask(server, client)
 
   // remove_task_link
   server.tool(
@@ -755,6 +776,7 @@ export const registerTaskObserverTools: ToolRegistrar = (server, client) => {
   registerListTasks(server, client)
   registerCreateTask(server, client)
   registerUpdateTask(server, client)
+  registerMoveTask(server, client)
   registerAddTaskLink(server, client)
   registerAddTaskTag(server, client)
   registerSetTaskDueDate(server, client)

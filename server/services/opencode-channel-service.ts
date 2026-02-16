@@ -39,16 +39,28 @@ async function getClient(): Promise<OpencodeClient> {
   return opencodeClient
 }
 
-function getObserverSystemPrompt(): string {
+function getObserverSystemPrompt(recentTasks?: Array<{ id: string; title: string; status: string }>): string {
   const today = new Date()
   const todayStr = today.toISOString().split('T')[0]
   const exampleDate = new Date(today.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+  const recentTasksSection = recentTasks && recentTasks.length > 0
+    ? `## Recent Open Tasks
+
+${recentTasks.map(t => `- ${t.id}: ${t.title} [${t.status}]`).join('\n')}
+
+IMPORTANT: Before creating a new task, check this list. If a task already covers the same topic,
+use update_task to add new details or move_task to cancel duplicates. Only create_task if no
+existing task covers the topic.
+
+`
+    : ''
 
   return `You are the user's observer. Only create a task when the user must take a specific action or fulfill a commitment they might otherwise forget. Default to storing a memory or doing nothing — only escalate to a task when doing nothing would cause the user to miss something important. A frivolous task is worse than no task: it wastes the user's time and erodes trust.
 
 Today's date: ${todayStr}
 
-IMPORTANT: You have NO tools. Instead, respond with a JSON object describing what actions to take.
+${recentTasksSection}IMPORTANT: You have NO tools. Instead, respond with a JSON object describing what actions to take.
 
 Response format (respond with ONLY this JSON, no other text):
 {
@@ -79,6 +91,14 @@ Use for: someone specifically asks the user to do something, the user must fulfi
 Do NOT use for: automated notifications, FYI messages, event reminders, status updates, confirmations.
 Fields: title (required, imperative action item), description, tags (array), dueDate (YYYY-MM-DD if mentioned).
 Write titles as clear action items (e.g., "Send invoice to Alice" not "Email from Alice about invoice").
+
+### update_task (update an existing task with new information)
+Use for: a message adds new context to an existing task (new due date, updated details, additional info).
+Fields: taskId (required), title, description, dueDate, tags.
+
+### move_task (change task status)
+Use for: canceling a duplicate task, marking a task complete because the message indicates it's been fulfilled, or changing task status based on new information.
+Fields: taskId (required), status (required: "TO_DO" | "IN_PROGRESS" | "CANCELED" | "DONE").
 
 ### store_memory (for non-task observations)
 Use for: learning someone's name, recurring patterns, key relationships, context updates, noteworthy information from notifications.
@@ -146,6 +166,8 @@ interface ObserverAction {
   title?: string
   description?: string
   dueDate?: string
+  taskId?: string
+  status?: string
 }
 
 // Execute a create_task action via the Fulcrum API
@@ -204,6 +226,65 @@ async function executeStoreMemory(
   })
 }
 
+// Execute an update_task action via the Fulcrum API
+async function executeUpdateTask(
+  action: ObserverAction,
+  sessionId: string,
+  fulcrumPort: number,
+): Promise<void> {
+  try {
+    const updates: Record<string, unknown> = {}
+    if (action.title) updates.title = action.title
+    if (action.description) updates.description = action.description
+    if (action.dueDate) updates.dueDate = action.dueDate
+
+    const resp = await fetch(`http://localhost:${fulcrumPort}/api/tasks/${action.taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    })
+    if (!resp.ok) {
+      log.messaging.warn('Observer failed to update task via OpenCode', {
+        sessionId, status: resp.status, taskId: action.taskId,
+      })
+      return
+    }
+    log.messaging.info('Observer updated task via OpenCode', { sessionId, taskId: action.taskId })
+  } catch (err) {
+    log.messaging.warn('Observer task update error via OpenCode', {
+      sessionId, error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
+// Execute a move_task action via the Fulcrum API
+async function executeMoveTask(
+  action: ObserverAction,
+  sessionId: string,
+  fulcrumPort: number,
+): Promise<void> {
+  try {
+    const resp = await fetch(`http://localhost:${fulcrumPort}/api/tasks/${action.taskId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: action.status }),
+    })
+    if (!resp.ok) {
+      log.messaging.warn('Observer failed to move task via OpenCode', {
+        sessionId, status: resp.status, taskId: action.taskId, targetStatus: action.status,
+      })
+      return
+    }
+    log.messaging.info('Observer moved task via OpenCode', {
+      sessionId, taskId: action.taskId, status: action.status,
+    })
+  } catch (err) {
+    log.messaging.warn('Observer task move error via OpenCode', {
+      sessionId, error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
 // Execute all observer actions from parsed response
 async function executeObserverActions(
   actions: ObserverAction[],
@@ -214,6 +295,10 @@ async function executeObserverActions(
   for (const action of actions) {
     if (action.type === 'create_task' && action.title) {
       await executeCreateTask(action, options, sessionId, fulcrumPort)
+    } else if (action.type === 'update_task' && action.taskId) {
+      await executeUpdateTask(action, sessionId, fulcrumPort)
+    } else if (action.type === 'move_task' && action.taskId && action.status) {
+      await executeMoveTask(action, sessionId, fulcrumPort)
     } else if (action.type === 'store_memory' && action.content) {
       await executeStoreMemory(action, options, sessionId)
     }
@@ -313,6 +398,7 @@ export async function* streamOpencodeObserverMessage(
     senderName?: string
     model?: string
     channelHistory?: ChannelHistoryMessage[]
+    recentTasks?: Array<{ id: string; title: string; status: string }>
   }
 ): AsyncGenerator<{ type: string; data: unknown }> {
   try {
@@ -341,7 +427,7 @@ export async function* streamOpencodeObserverMessage(
 
 ${userMessage}`
 
-    const fullPrompt = `${getObserverSystemPrompt()}
+    const fullPrompt = `${getObserverSystemPrompt(options.recentTasks)}
 
 ---
 
