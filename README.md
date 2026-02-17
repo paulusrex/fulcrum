@@ -270,6 +270,7 @@ Both plugins include an MCP server with 100+ tools:
 | **Memory** | Read/update master memory file; store ephemeral knowledge with tags |
 | **Calendar** | Manage CalDAV accounts, sync calendars, configure event copy rules |
 | **Gmail** | List Google accounts, manage Gmail drafts, send emails |
+| **Jobs** | List, create, update, delete, enable/disable, and run systemd timers and launchd jobs |
 | **Assistant** | Send messages via channels (WhatsApp, Discord, Telegram, Slack, Gmail); query sweep history |
 
 Use `search_tools` to discover available tools by keyword or category.
@@ -315,9 +316,9 @@ For browser-only access, use Tailscale or Cloudflare Tunnels to expose your serv
 <details>
 <summary><strong>Configuration</strong></summary>
 
-Sensitive credentials (API keys, tokens, webhook URLs) are encrypted using [fnox](https://github.com/yarlson/fnox) with age encryption. The age key and encrypted secrets live in the fulcrum directory (`age.txt` and `fnox.toml`). Non-sensitive settings are stored in `settings.json`. Existing plain-text secrets are automatically migrated to fnox on server start.
+All configuration is managed by [fnox](https://github.com/yarlson/fnox) — a single `fnox.toml` file stores both plain and encrypted settings. Sensitive credentials (API keys, tokens, webhook URLs) are encrypted with age; the age key (`age.txt`) lives alongside `fnox.toml` in the fulcrum directory. Existing `settings.json` files are automatically migrated to fnox on server start.
 
-Settings are stored in `.fulcrum/settings.json`. The fulcrum directory is resolved in this order:
+The fulcrum directory is resolved in this order:
 
 1. `FULCRUM_DIR` environment variable
 2. `.fulcrum` in current working directory

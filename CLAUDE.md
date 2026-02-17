@@ -144,7 +144,8 @@ fulcrum notify <title> <message>  # Send notification
 - `/api/monitoring/*` - System and Claude instance monitoring, channel messages, observer invocations
 - `/api/config/fnox-status` - fnox availability and secret count
 - `/api/deployments/*` - Deployment history
-- `/api/repositories/*` - Repository management
+- `/api/repositories/*` - Repository management (creation auto-creates or links to a project)
+- `/api/jobs/*` - Systemd/launchd timer management (list, CRUD, enable/disable, run, logs)
 - `/api/search` - Unified full-text search across all entity types (incl. conversations)
 - `/api/memory/*` - Agent memory CRUD and FTS5 search
 - `/api/memory-file` - Master memory file read/write/section-update
@@ -161,7 +162,7 @@ fulcrum notify <title> <message>  # Send notification
 - `/tasks`, `/tasks/$taskId` - Task management
 - `/calendar` - Calendar view with month/week views, project/tag filters (Cmd+7)
 - `/jobs` - Systemd/launchd timer management (Cmd+6)
-- `/apps`, `/apps/new`, `/apps/$appId` - App deployment
+- `/apps` - App deployment overview (card grid linking to repository deploy tabs)
 - `/monitoring` - System metrics dashboard (includes Review tab, Observer tab)
 - `/repositories`, `/repositories/$repoId` - Repository management
 - `/terminals` - Persistent terminal tabs
