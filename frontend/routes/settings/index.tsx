@@ -1571,7 +1571,9 @@ function SettingsPage() {
                         onValueChange={(v) => setLocalDefaultTaskType(v as TaskType)}
                       >
                         <SelectTrigger className="w-40">
-                          <SelectValue />
+                          <SelectValue>
+                            {(value: string) => t(`fields.tasks.defaultType.options.${value}`) || value}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="worktree">{t('fields.tasks.defaultType.options.worktree')}</SelectItem>
