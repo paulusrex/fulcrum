@@ -54,7 +54,7 @@ export function LogsTab({ appId, services }: LogsTabProps) {
   const containers = status?.containers ?? []
 
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">{t('apps.logs.title')}</h3>
         <p className="text-sm text-muted-foreground">

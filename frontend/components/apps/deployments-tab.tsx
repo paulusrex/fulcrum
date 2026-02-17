@@ -49,7 +49,7 @@ export function DeploymentsTab({ appId, deployStore, onViewStreamingLogs }: Depl
   }
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <div className="mb-4">
         <h3 className="text-lg font-semibold">{t('apps.deployments.title')}</h3>
         <p className="text-sm text-muted-foreground">

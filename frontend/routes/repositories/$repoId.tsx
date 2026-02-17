@@ -576,14 +576,14 @@ const RepositoryDetailView = observer(function RepositoryDetailView() {
 
           <TabsContent value="deploy" className="mt-0 h-full">
             <ScrollArea className="h-full">
-              <div className="p-4">
+              <div className="p-4 mx-auto max-w-4xl">
                 {/* Check if deployment prerequisites are met */}
                 {prereqs && !prereqs.ready ? (
                   <DeploymentSetupWizard />
                 ) : activeSubtab === 'general' ? (
                   app ? (
                     /* App exists - show app config */
-                    <div className="space-y-4 max-w-4xl">
+                    <div className="space-y-4">
                       {/* Top row: Deploy + Services side by side */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <DeployControls

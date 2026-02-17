@@ -23,6 +23,7 @@ import {
   CodeIcon,
   AiChat02Icon,
   Calendar03Icon,
+  Rocket01Icon,
 } from '@hugeicons/core-free-icons'
 
 interface CommandPaletteProps {
@@ -120,9 +121,21 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
         },
       },
       {
+        id: 'goto-apps',
+        label: t('commandPalette.commands.goToApps'),
+        shortcut: 'meta+7',
+        keywords: ['apps', 'deploy', 'docker', 'containers', 'services'],
+        category: 'navigation',
+        icon: <HugeiconsIcon icon={Rocket01Icon} size={16} strokeWidth={2} />,
+        action: () => {
+          navigate({ to: '/apps' })
+          setOpen(false)
+        },
+      },
+      {
         id: 'goto-monitoring',
         label: t('commandPalette.commands.goToMonitoring'),
-        shortcut: 'meta+7',
+        shortcut: 'meta+8',
         keywords: ['system', 'cpu', 'memory', 'processes', 'usage'],
         category: 'navigation',
         icon: <HugeiconsIcon icon={ChartLineData01Icon} size={16} strokeWidth={2} />,
@@ -261,7 +274,8 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
     navigate({ to: '/terminals', search: (prev) => ({ ...prev, tab: 'all-repos' }) })
   }, { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+6', () => navigate({ to: '/jobs' }), { allowInInput: true, allowInTerminal: true })
-  useHotkeys('meta+7', () => navigate({ to: '/monitoring' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+7', () => navigate({ to: '/apps' }), { allowInInput: true, allowInTerminal: true })
+  useHotkeys('meta+8', () => navigate({ to: '/monitoring' }), { allowInInput: true, allowInTerminal: true })
   useHotkeys('meta+,', () => navigate({ to: '/settings' }), { allowInInput: true, allowInTerminal: true })
 
   // New task shortcut
@@ -345,6 +359,11 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, onNewTask, 
           setOpen(false)
           break
         case '7':
+          e.preventDefault()
+          navigate({ to: '/apps' })
+          setOpen(false)
+          break
+        case '8':
           e.preventDefault()
           navigate({ to: '/monitoring' })
           setOpen(false)

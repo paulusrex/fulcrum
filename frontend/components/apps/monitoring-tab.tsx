@@ -211,7 +211,7 @@ export function MonitoringTab({ appId, repoDisplayName }: MonitoringTabProps) {
 
   if (!dockerStats?.available) {
     return (
-      <div className="max-w-2xl">
+      <div>
         <div className="mb-4">
           <h3 className="text-lg font-semibold">{t('apps.monitoring.title')}</h3>
           <p className="text-sm text-muted-foreground">{t('apps.monitoring.description')}</p>
@@ -225,7 +225,7 @@ export function MonitoringTab({ appId, repoDisplayName }: MonitoringTabProps) {
 
   if (appContainers.length === 0) {
     return (
-      <div className="max-w-2xl">
+      <div>
         <div className="mb-4">
           <h3 className="text-lg font-semibold">{t('apps.monitoring.title')}</h3>
           <p className="text-sm text-muted-foreground">{t('apps.monitoring.description')}</p>
@@ -238,7 +238,7 @@ export function MonitoringTab({ appId, repoDisplayName }: MonitoringTabProps) {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <div className="mb-4">
         <h3 className="text-lg font-semibold">{t('apps.monitoring.title')}</h3>
         <p className="text-sm text-muted-foreground">

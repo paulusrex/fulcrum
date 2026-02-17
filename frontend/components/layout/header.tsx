@@ -23,6 +23,7 @@ import {
   More03Icon,
   Calendar03Icon,
   GridViewIcon,
+  Rocket01Icon,
 } from '@hugeicons/core-free-icons'
 import { CreateTaskModal } from '@/components/kanban/create-task-modal'
 import { useChat } from '@/hooks/use-chat'
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
   { to: '/assistant', icon: null, lucideIcon: Bot, labelKey: 'header.assistant', matchPrefix: true },
   { to: '/projects', icon: PackageIcon, labelKey: 'header.projects', matchPrefix: true },
   { to: '/jobs', icon: GridViewIcon, labelKey: 'header.jobs', matchPrefix: true },
+  { to: '/apps', icon: Rocket01Icon, labelKey: 'header.apps', matchPrefix: true },
   { to: '/monitoring', icon: Chart02Icon, labelKey: 'header.monitoring', matchPrefix: true },
 ] as const
 
