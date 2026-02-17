@@ -141,8 +141,8 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
           {/* All Projects option */}
           <button
             className={cn(
-              'w-full px-3 py-1.5 text-left text-xs hover:bg-accent flex items-center gap-2',
-              !value && 'bg-accent'
+              'w-full px-3 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground flex items-center gap-2',
+              !value && 'bg-accent text-accent-foreground'
             )}
             onClick={() => selectProject(null)}
           >
@@ -161,8 +161,8 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
               <button
                 key={project.id}
                 className={cn(
-                  'w-full px-3 py-1.5 text-left text-xs hover:bg-accent flex items-center gap-2',
-                  isSelected && 'bg-accent'
+                  'group w-full px-3 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground flex items-center gap-2',
+                  isSelected && 'bg-accent text-accent-foreground'
                 )}
                 onClick={() => selectProject(project.id)}
               >
@@ -173,7 +173,10 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
                 </span>
                 <span className="flex-1 truncate">{project.name}</span>
                 {project.count !== undefined && (
-                  <span className="text-muted-foreground text-[10px]">
+                  <span className={cn(
+                    'text-muted-foreground group-hover:text-accent-foreground text-[10px]',
+                    isSelected && 'text-accent-foreground'
+                  )}>
                     {project.count}
                   </span>
                 )}
@@ -185,8 +188,8 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
           {!useCustomOptions && showInbox && 'inbox'.includes(searchQuery.toLowerCase()) && (
             <button
               className={cn(
-                'w-full px-3 py-1.5 text-left text-xs hover:bg-accent flex items-center gap-2',
-                value === 'inbox' && 'bg-accent'
+                'group w-full px-3 py-1.5 text-left text-xs hover:bg-accent hover:text-accent-foreground flex items-center gap-2',
+                value === 'inbox' && 'bg-accent text-accent-foreground'
               )}
               onClick={() => selectProject('inbox')}
             >
@@ -196,7 +199,10 @@ export function ProjectFilter({ value, onChange, options, allLabel, showInbox = 
                 )}
               </span>
               <span className="flex-1 truncate">Inbox</span>
-              <span className="text-muted-foreground text-[10px]">
+              <span className={cn(
+                'text-muted-foreground group-hover:text-accent-foreground text-[10px]',
+                value === 'inbox' && 'text-accent-foreground'
+              )}>
                 {inboxCount}
               </span>
             </button>
