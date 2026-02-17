@@ -5,6 +5,7 @@ import { createTestApp } from '../__tests__/fixtures/app'
 import { setupTestEnv, type TestEnv } from '../__tests__/utils/env'
 import { CONFIG_KEYS } from '../../shared/config-keys'
 import { VALID_SETTING_PATHS } from '../lib/settings/types'
+import { setFnoxValue } from '../lib/settings/fnox'
 
 describe('Config Routes', () => {
   let testEnv: TestEnv
@@ -261,6 +262,19 @@ describe('Config Routes', () => {
       expect(res3.status).toBe(400)
       const body3 = await res3.json()
       expect(body3.error).toContain('must be one of')
+    })
+
+    test('normalizes legacy task type values on read', async () => {
+      const { get } = createTestApp()
+
+      // Inject legacy "code" value directly into fnox cache (simulates un-migrated data)
+      setFnoxValue('tasks.defaultTaskType', 'code')
+
+      const res = await get('/api/config/tasks.defaultTaskType')
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.value).toBe('worktree')
     })
 
     test('validates start worktree tasks immediately', async () => {

@@ -17,6 +17,7 @@ import type { AgentType } from '@shared/types'
 import { ensureFulcrumDir, expandPath } from './paths'
 import {
   getNestedValue,
+  migrateTaskType,
 } from './migration'
 import { migrateSettingsJsonToFnox } from './migrate-to-fnox'
 import {
@@ -65,7 +66,7 @@ export function getSettings(): Settings {
       claudeCodePath: (fv('agent.claudeCodePath') as string | null) ?? DEFAULT_SETTINGS.agent.claudeCodePath,
     },
     tasks: {
-      defaultTaskType: (fv('tasks.defaultTaskType') as Settings['tasks']['defaultTaskType']) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
+      defaultTaskType: migrateTaskType(fv('tasks.defaultTaskType') as string | undefined) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
       startWorktreeTasksImmediately: (fv('tasks.startWorktreeTasksImmediately') as boolean | null) ?? DEFAULT_SETTINGS.tasks.startWorktreeTasksImmediately,
     },
     appearance: {

@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import { join } from 'path'
 import { log } from '../logger'
 import { getFulcrumDir } from './paths'
-import { getNestedValue } from './migration'
+import { getNestedValue, migrateTaskType } from './migration'
 import { FNOX_CONFIG_MAP, setFnoxValue, isFnoxAvailable } from './fnox'
 import { DEFAULT_SETTINGS } from './types'
 import { DEFAULT_NOTIFICATION_SETTINGS } from './notifications'
@@ -48,8 +48,13 @@ export function migrateSettingsJsonToFnox(): void {
     // Skip internal keys
     if (settingsPath === '_schemaVersion') continue
 
-    const value = getNestedValue(parsed, settingsPath)
+    let value = getNestedValue(parsed, settingsPath)
     if (value === undefined || value === null) continue
+
+    // Normalize legacy task type values during migration
+    if (settingsPath === 'tasks.defaultTaskType' && typeof value === 'string') {
+      value = migrateTaskType(value) ?? value
+    }
 
     // Get the default value for comparison
     const defaultValue = getNestedValue(allDefaults, settingsPath)

@@ -271,12 +271,16 @@ export function useClaudeCodeDarkTheme() {
 // Task defaults
 export type TaskType = 'worktree' | 'manual' | 'scratch'
 
+const VALID_TASK_TYPES = new Set<string>(['worktree', 'manual', 'scratch'])
+
 export function useDefaultTaskType() {
   const query = useConfig(CONFIG_KEYS.DEFAULT_TASK_TYPE)
+  const raw = query.data?.value as string | undefined
+  const data = (raw && VALID_TASK_TYPES.has(raw) ? raw : undefined) as TaskType | undefined
 
   return {
     ...query,
-    data: (query.data?.value as TaskType) ?? 'worktree',
+    data: data ?? 'worktree',
     isDefault: query.data?.isDefault ?? true,
   }
 }
