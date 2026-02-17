@@ -5,7 +5,7 @@
  * Core tools are always loaded; deferred tools are loaded on-demand after search.
  */
 
-export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup' | 'email' | 'messaging' | 'assistant' | 'caldav' | 'memory'
+export type ToolCategory = 'core' | 'tasks' | 'projects' | 'repositories' | 'apps' | 'filesystem' | 'git' | 'notifications' | 'exec' | 'settings' | 'backup' | 'email' | 'messaging' | 'assistant' | 'caldav' | 'memory' | 'jobs'
 
 export interface ToolMetadata {
   name: string
@@ -838,6 +838,71 @@ export const toolRegistry: ToolMetadata[] = [
     description: 'Delete a Gmail draft',
     category: 'email',
     keywords: ['gmail', 'draft', 'delete', 'remove', 'email', 'google'],
+    defer_loading: true,
+  },
+
+  // Job scheduling tools
+  {
+    name: 'list_jobs',
+    description: 'List scheduled jobs (systemd timers on Linux, launchd on macOS)',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'schedule', 'cron', 'systemd', 'launchd', 'list'],
+    defer_loading: true,
+  },
+  {
+    name: 'get_job',
+    description: 'Get details of a scheduled job including schedule, command, and execution stats',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'schedule', 'details', 'get'],
+    defer_loading: true,
+  },
+  {
+    name: 'get_job_logs',
+    description: 'Get execution logs for a scheduled job',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'logs', 'output', 'journalctl'],
+    defer_loading: true,
+  },
+  {
+    name: 'create_job',
+    description: 'Create a new scheduled job (Linux systemd only)',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'schedule', 'create', 'new', 'systemd'],
+    defer_loading: true,
+  },
+  {
+    name: 'update_job',
+    description: 'Update a scheduled job (Linux systemd only)',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'schedule', 'update', 'edit', 'modify'],
+    defer_loading: true,
+  },
+  {
+    name: 'delete_job',
+    description: 'Delete a scheduled job (Linux systemd user jobs only)',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'schedule', 'delete', 'remove'],
+    defer_loading: true,
+  },
+  {
+    name: 'enable_job',
+    description: 'Enable a scheduled job so it runs on schedule',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'enable', 'start', 'activate'],
+    defer_loading: true,
+  },
+  {
+    name: 'disable_job',
+    description: 'Disable a scheduled job so it stops running',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'disable', 'stop', 'deactivate'],
+    defer_loading: true,
+  },
+  {
+    name: 'run_job_now',
+    description: 'Trigger immediate execution of a scheduled job',
+    category: 'jobs',
+    keywords: ['job', 'timer', 'run', 'trigger', 'execute', 'now'],
     defer_loading: true,
   },
 ]
