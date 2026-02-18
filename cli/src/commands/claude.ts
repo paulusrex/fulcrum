@@ -91,11 +91,30 @@ async function handleClaudeCommand(action: string | undefined) {
   )
 }
 
+function isMcpServerRegistered(): boolean {
+  const claudeJson = join(homedir(), '.claude.json')
+  if (!existsSync(claudeJson)) {
+    return false
+  }
+
+  try {
+    const data = JSON.parse(readFileSync(claudeJson, 'utf-8'))
+    return !!data.mcpServers?.[PLUGIN_NAME]
+  } catch {
+    return false
+  }
+}
+
 // Check if plugin needs to be installed or updated
 export function needsPluginUpdate(): boolean {
   const installedVersion = getInstalledVersion()
   if (!installedVersion) {
     return true // Not installed
+  }
+
+  // Also check if MCP server is registered (plugin install doesn't auto-register)
+  if (!isMcpServerRegistered()) {
+    return true
   }
 
   const bundledVersion = getBundledVersion()
@@ -137,6 +156,14 @@ export async function installClaudePlugin(options: { silent?: boolean } = {}) {
     }
     log('✓ Installed plugin')
 
+    // 4. Register MCP server (plugin install doesn't auto-register MCP servers)
+    runClaude(['mcp', 'remove', PLUGIN_NAME, '--scope', 'user']) // Ignore errors
+    const mcpResult = runClaude(['mcp', 'add', '--scope', 'user', PLUGIN_NAME, '--', 'fulcrum', 'mcp'])
+    if (!mcpResult.success) {
+      throw new Error('Failed to register MCP server: ' + mcpResult.output)
+    }
+    log('✓ Registered MCP server')
+
     log('')
     log('Installation complete! Restart Claude Code to apply changes.')
   } catch (err) {
@@ -150,15 +177,19 @@ export async function installClaudePlugin(options: { silent?: boolean } = {}) {
 
 async function uninstallClaudePlugin() {
   try {
-    // 1. Uninstall plugin (ignore errors - plugin might not be installed)
+    // 1. Remove MCP server (ignore errors - might not be registered)
+    runClaude(['mcp', 'remove', PLUGIN_NAME, '--scope', 'user'])
+    console.log('✓ Removed MCP server')
+
+    // 2. Uninstall plugin (ignore errors - plugin might not be installed)
     runClaude(['plugin', 'uninstall', PLUGIN_ID])
     console.log('✓ Uninstalled plugin')
 
-    // 2. Remove marketplace (ignore errors - marketplace might not exist)
+    // 3. Remove marketplace (ignore errors - marketplace might not exist)
     runClaude(['plugin', 'marketplace', 'remove', MARKETPLACE_NAME])
     console.log('✓ Removed marketplace')
 
-    // 3. Clean up plugin files
+    // 4. Clean up plugin files
     if (existsSync(MARKETPLACE_DIR)) {
       rmSync(MARKETPLACE_DIR, { recursive: true })
       console.log('✓ Removed plugin files from ' + MARKETPLACE_DIR)
