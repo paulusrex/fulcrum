@@ -178,6 +178,9 @@ function registerCreateTask(server: Server, client: Client) {
       branch: z
         .optional(z.string())
         .describe('Branch name for the task worktree (auto-generated if omitted)'),
+      prefix: z
+        .optional(z.string())
+        .describe('Prefix prepended to branch name for ticket linkage (e.g., "ENG-123"). Branch becomes: ENG-123/slug-a1b2'),
       description: z.optional(z.string()).describe('Task description'),
       status: z
         .optional(TaskStatusSchema)
@@ -207,6 +210,7 @@ function registerCreateTask(server: Server, client: Client) {
       repoPath,
       baseBranch,
       branch,
+      prefix,
       description,
       status,
       projectId,
@@ -228,6 +232,7 @@ function registerCreateTask(server: Server, client: Client) {
           repoName,
           baseBranch: repoPath ? effectiveBaseBranch : null,
           branch: branch ?? null,
+          prefix: prefix ?? null,
           worktreePath: null,
           description,
           status: status ?? 'TO_DO',

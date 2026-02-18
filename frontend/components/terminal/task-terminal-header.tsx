@@ -113,6 +113,7 @@ export function TaskTerminalHeader({
     repoName: taskInfo.repoName,
     baseBranch: taskInfo.baseBranch,
     branch: taskInfo.branch,
+    prefix: null,
     viewState: null,
     prUrl: taskInfo.prUrl ?? null,
     startupScript: null,

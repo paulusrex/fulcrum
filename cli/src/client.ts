@@ -45,6 +45,7 @@ export interface CreateTaskInput {
   repoName?: string | null
   baseBranch?: string | null
   branch?: string | null
+  prefix?: string | null
   worktreePath?: string | null
   projectId?: string | null
   repositoryId?: string | null

@@ -82,6 +82,7 @@ export function TaskActionsDropdown({
     repoName,
     baseBranch,
     branch: null,
+    prefix: null,
     viewState: null,
     prUrl: prUrl ?? null,
     startupScript: null,

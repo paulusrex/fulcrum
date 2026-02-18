@@ -75,7 +75,8 @@ function copyFilesToWorktree(repoPath: string, worktreePath: string, patterns: s
 // Generate worktree path and branch name for a task
 function generateWorktreeInfo(
   repoPath: string,
-  taskTitle: string
+  taskTitle: string,
+  prefix?: string | null
 ): { worktreePath: string; branch: string } {
   const worktreesDir = getWorktreeBasePath()
 
@@ -87,7 +88,8 @@ function generateWorktreeInfo(
     .slice(0, 50)
 
   const suffix = Math.random().toString(36).slice(2, 6)
-  const branch = `${slugifiedTitle}-${suffix}`
+  const cleanPrefix = prefix?.replace(/\/+$/, '')
+  const branch = cleanPrefix ? `${cleanPrefix}/${slugifiedTitle}-${suffix}` : `${slugifiedTitle}-${suffix}`
   const worktreeName = branch
   const repoName = path.basename(repoPath)
   const worktreePath = path.join(worktreesDir, repoName, worktreeName)
@@ -250,7 +252,7 @@ export async function updateTaskStatus(
     if (existing.repositoryId && !existing.worktreePath) {
       const repo = db.select().from(repositories).where(eq(repositories.id, existing.repositoryId)).get()
       if (repo) {
-        const { worktreePath, branch } = generateWorktreeInfo(repo.path, existing.title)
+        const { worktreePath, branch } = generateWorktreeInfo(repo.path, existing.title, existing.prefix)
 
         // Get base branch (default to 'main')
         let baseBranch = 'main'

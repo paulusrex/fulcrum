@@ -248,6 +248,7 @@ app.post('/', async (c) => {
         tags?: string[]
         blockedByTaskIds?: string[]
         type?: 'worktree' | 'scratch' | null
+        prefix?: string | null
       }
     >()
 
@@ -274,6 +275,7 @@ app.post('/', async (c) => {
       repoName: body.repoName || null,
       baseBranch: body.baseBranch || null,
       branch: body.branch || null,
+      prefix: body.prefix || null,
       worktreePath: body.worktreePath || null,
       startupScript: body.startupScript || null,
       agent: body.agent || 'claude',
@@ -509,6 +511,7 @@ app.post('/:id/initialize-worktree', async (c) => {
       startupScript?: string
       agentOptions?: Record<string, string> | null
       opencodeModel?: string | null
+      prefix?: string | null
     }>()
 
     if (!body.repoPath || !body.branch || !body.worktreePath || !body.baseBranch) {
@@ -542,6 +545,7 @@ app.post('/:id/initialize-worktree', async (c) => {
         repoName: body.repoName,
         baseBranch: body.baseBranch,
         branch: body.branch,
+        prefix: body.prefix || null,
         worktreePath: body.worktreePath,
         startupScript: body.startupScript || null,
         agentOptions: body.agentOptions ? JSON.stringify(body.agentOptions) : null,

@@ -109,6 +109,7 @@ export interface Task {
   repoName: string | null // Nullable for manual tasks
   baseBranch: string | null // Nullable for manual tasks
   branch: string | null
+  prefix: string | null
   worktreePath: string | null
   viewState: ViewState | null
   prUrl: string | null

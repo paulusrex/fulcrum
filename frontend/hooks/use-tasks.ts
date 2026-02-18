@@ -36,6 +36,7 @@ export function useCreateTask() {
       repoName?: string | null
       baseBranch?: string | null
       branch?: string | null
+      prefix?: string | null
       worktreePath?: string | null
       prUrl?: string | null
       copyFiles?: string

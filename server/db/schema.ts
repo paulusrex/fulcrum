@@ -10,6 +10,7 @@ export const tasks = sqliteTable('tasks', {
   repoName: text('repo_name'), // Now nullable for manual tasks
   baseBranch: text('base_branch'), // Now nullable for manual tasks
   branch: text('branch'),
+  prefix: text('prefix'), // Branch name prefix for ticket linkage (e.g., "ENG-123")
   worktreePath: text('worktree_path'),
   viewState: text('view_state'), // JSON: { activeTab, browserUrl, diffOptions }
   prUrl: text('pr_url'), // GitHub PR URL for auto-completion tracking
