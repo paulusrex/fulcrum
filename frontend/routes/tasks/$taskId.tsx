@@ -50,6 +50,7 @@ import {
   PaintBrush01Icon,
   File01Icon,
   SourceCodeCircleIcon,
+  Loading03Icon,
 } from '@hugeicons/core-free-icons'
 import type { TaskLinkType } from '@/types'
 import { DeleteTaskDialog } from '@/components/delete-task-dialog'
@@ -577,7 +578,12 @@ function TaskView() {
                   />
                 }
               >
-                {STATUS_LABELS[task.status]}
+                <span className="flex items-center gap-1">
+                  {updateTask.isPending && updateTask.variables?.updates?.status && (
+                    <HugeiconsIcon icon={Loading03Icon} size={12} className="animate-spin" />
+                  )}
+                  {STATUS_LABELS[task.status]}
+                </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuRadioGroup
@@ -790,7 +796,12 @@ function TaskView() {
                 />
               }
             >
-              {STATUS_LABELS[task.status]}
+              <span className="flex items-center gap-1">
+                {updateTask.isPending && updateTask.variables?.updates?.status && (
+                  <HugeiconsIcon icon={Loading03Icon} size={12} className="animate-spin" />
+                )}
+                {STATUS_LABELS[task.status]}
+              </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuRadioGroup

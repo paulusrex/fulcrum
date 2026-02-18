@@ -270,7 +270,12 @@ export function TaskContent({ task, onDeleted, compact }: TaskContentProps) {
                   />
                 }
               >
-                {STATUS_LABELS[task.status]}
+                <span className="flex items-center gap-1">
+                  {updateTask.isPending && updateTask.variables?.updates?.status && (
+                    <HugeiconsIcon icon={Loading03Icon} size={12} className="animate-spin" />
+                  )}
+                  {STATUS_LABELS[task.status]}
+                </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuRadioGroup
