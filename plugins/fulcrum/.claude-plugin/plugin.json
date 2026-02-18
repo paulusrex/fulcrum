@@ -4,9 +4,5 @@
   "version": "4.2.2",
   "author": {
     "name": "Fulcrum"
-  },
-  "hooks": "./hooks/hooks.json",
-  "mcpServers": "./.mcp.json",
-  "skills": "./skills/",
-  "commands": "./commands/"
+  }
 }
