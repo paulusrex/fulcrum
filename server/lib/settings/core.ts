@@ -68,6 +68,7 @@ export function getSettings(): Settings {
     tasks: {
       defaultTaskType: migrateTaskType(fv('tasks.defaultTaskType') as string | undefined) ?? DEFAULT_SETTINGS.tasks.defaultTaskType,
       startWorktreeTasksImmediately: (fv('tasks.startWorktreeTasksImmediately') as boolean | null) ?? DEFAULT_SETTINGS.tasks.startWorktreeTasksImmediately,
+      scratchStartupScript: (fv('tasks.scratchStartupScript') as string | null) ?? DEFAULT_SETTINGS.tasks.scratchStartupScript,
     },
     appearance: {
       language: (fv('appearance.language') as 'en' | 'zh' | null) ?? null,

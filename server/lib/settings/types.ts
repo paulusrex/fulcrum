@@ -129,6 +129,7 @@ export interface Settings {
   tasks: {
     defaultTaskType: TaskType
     startWorktreeTasksImmediately: boolean
+    scratchStartupScript: string | null
   }
   appearance: {
     language: 'en' | 'zh' | null
@@ -188,6 +189,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tasks: {
     defaultTaskType: 'worktree',
     startWorktreeTasksImmediately: true,
+    scratchStartupScript: null,
   },
   appearance: {
     language: null,
@@ -294,6 +296,7 @@ export const VALID_SETTING_PATHS = new Set([
   'agent.claudeCodePath',
   'tasks.defaultTaskType',
   'tasks.startWorktreeTasksImmediately',
+  'tasks.scratchStartupScript',
   'appearance.language',
   'appearance.theme',
   'appearance.timezone',

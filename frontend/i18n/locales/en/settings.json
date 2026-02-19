@@ -194,6 +194,10 @@
       "startImmediately": {
         "label": "Start Immediately",
         "description": "When enabled, worktree tasks start work immediately and create a git worktree. When disabled, tasks go to To Do."
+      },
+      "scratchStartupScript": {
+        "label": "Scratch Startup Script",
+        "description": "Commands to run before agent invocation for scratch tasks (e.g., export ENV_VAR=value)"
       }
     },
     "language": {

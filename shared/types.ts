@@ -670,6 +670,7 @@ export interface Project {
   claudeOptions: Record<string, string> | null
   opencodeOptions: Record<string, string> | null
   opencodeModel: string | null
+  startupScript: string | null
   lastAccessedAt: string | null
   createdAt: string
   updatedAt: string

@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `startup_script` text;

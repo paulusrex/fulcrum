@@ -238,6 +238,7 @@ function buildProjectWithDetails(
     claudeOptions: project.claudeOptions ? JSON.parse(project.claudeOptions) : null,
     opencodeOptions: project.opencodeOptions ? JSON.parse(project.opencodeOptions) : null,
     opencodeModel: project.opencodeModel ?? null,
+    startupScript: project.startupScript ?? null,
     lastAccessedAt: project.lastAccessedAt,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
@@ -661,6 +662,7 @@ const PATCH_FIELDS: Record<string, (v: unknown) => unknown> = {
   claudeOptions: (v) => v ? JSON.stringify(v) : null,
   opencodeOptions: (v) => v ? JSON.stringify(v) : null,
   opencodeModel: (v) => v,
+  startupScript: (v) => v,
 }
 
 function buildProjectUpdateData(body: Record<string, unknown>, now: string): Record<string, unknown> {

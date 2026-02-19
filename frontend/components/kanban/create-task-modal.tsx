@@ -423,7 +423,7 @@ export function CreateTaskModal({ open: controlledOpen, onOpenChange, defaultRep
         // Repository reference for deferred worktree creation
         repositoryId: isCodeTask && !startImmediately ? selectedRepoId : undefined,
         copyFiles: isCodeTask ? (selectedRepo?.copyFiles || undefined) : undefined,
-        startupScript: isCodeTask ? (selectedRepo?.startupScript || undefined) : undefined,
+        startupScript: isCodeTask ? ([selectedRepoProject?.startupScript, selectedRepo?.startupScript].filter(Boolean).join('\n') || undefined) : undefined,
         agentOptions: (isCodeTask || isScratch) ? (agentOptions || undefined) : undefined,
         opencodeModel: (isCodeTask || isScratch) && agent === 'opencode' ? opencodeModel : undefined,
         // Generalized task fields

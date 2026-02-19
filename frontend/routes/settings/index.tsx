@@ -55,6 +55,7 @@ import {
 
   useDefaultTaskType,
   useStartWorktreeTasksImmediately,
+  useScratchStartupScript,
   useTimezone,
   useAssistantProvider,
   useAssistantModel,
@@ -161,6 +162,7 @@ function SettingsPage() {
   const { data: claudeCodeDarkTheme } = useClaudeCodeDarkTheme()
   const { data: defaultTaskType, isLoading: taskTypeLoading } = useDefaultTaskType()
   const { data: startWorktreeTasksImmediately, isLoading: startImmediatelyLoading } = useStartWorktreeTasksImmediately()
+  const { data: scratchStartupScript, isLoading: scratchStartupScriptLoading } = useScratchStartupScript()
   const { data: timezone, isLoading: timezoneLoading } = useTimezone()
   const { data: assistantProvider, isLoading: assistantProviderLoading } = useAssistantProvider()
   const { data: assistantModel, isLoading: assistantModelLoading } = useAssistantModel()
@@ -242,6 +244,7 @@ function SettingsPage() {
   // Task defaults local state
   const [localDefaultTaskType, setLocalDefaultTaskType] = useState<TaskType>('worktree')
   const [localStartWorktreeTasksImmediately, setLocalStartWorktreeTasksImmediately] = useState(true)
+  const [localScratchStartupScript, setLocalScratchStartupScript] = useState<string>('')
 
   // Timezone local state
   const [localTimezone, setLocalTimezone] = useState<string | null>(null)
@@ -345,7 +348,8 @@ function SettingsPage() {
   useEffect(() => {
     if (defaultTaskType !== undefined) setLocalDefaultTaskType(defaultTaskType)
     if (startWorktreeTasksImmediately !== undefined) setLocalStartWorktreeTasksImmediately(startWorktreeTasksImmediately)
-  }, [defaultTaskType, startWorktreeTasksImmediately])
+    if (scratchStartupScript !== undefined) setLocalScratchStartupScript(scratchStartupScript ?? '')
+  }, [defaultTaskType, startWorktreeTasksImmediately, scratchStartupScript])
 
   // Sync timezone
   useEffect(() => {
@@ -378,7 +382,7 @@ function SettingsPage() {
   ])
 
   const isLoading =
-    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || autoScrollLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || timezoneLoading || assistantProviderLoading || assistantModelLoading || assistantObserverModelLoading || assistantDocumentsDirLoading ||
+    portLoading || reposDirLoading || editorAppLoading || editorHostLoading || editorSshPortLoading || githubPatLoading || defaultAgentLoading || opcodeModelLoading || opcodeDefaultAgentLoading || opencodePlanAgentLoading || autoScrollLoading || notificationsLoading || zAiLoading || deploymentLoading || taskTypeLoading || startImmediatelyLoading || scratchStartupScriptLoading || timezoneLoading || assistantProviderLoading || assistantModelLoading || assistantObserverModelLoading || assistantDocumentsDirLoading ||
     ritualsEnabledLoading || morningTimeLoading || morningPromptLoading || eveningTimeLoading || eveningPromptLoading
 
   const hasZAiChanges = zAiSettings && (
@@ -396,7 +400,8 @@ function SettingsPage() {
 
   const hasTaskDefaultsChanges =
     localDefaultTaskType !== defaultTaskType ||
-    localStartWorktreeTasksImmediately !== startWorktreeTasksImmediately
+    localStartWorktreeTasksImmediately !== startWorktreeTasksImmediately ||
+    localScratchStartupScript !== (scratchStartupScript ?? '')
 
   const hasTimezoneChanges = localTimezone !== timezone
 
@@ -756,6 +761,16 @@ function SettingsPage() {
           new Promise((resolve) => {
             updateConfig.mutate(
               { key: CONFIG_KEYS.START_WORKTREE_TASKS_IMMEDIATELY, value: localStartWorktreeTasksImmediately },
+              { onSettled: resolve }
+            )
+          })
+        )
+      }
+      if (localScratchStartupScript !== (scratchStartupScript ?? '')) {
+        promises.push(
+          new Promise((resolve) => {
+            updateConfig.mutate(
+              { key: CONFIG_KEYS.SCRATCH_STARTUP_SCRIPT, value: localScratchStartupScript.trim() || null },
               { onSettled: resolve }
             )
           })
@@ -1601,6 +1616,26 @@ function SettingsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
                       {t('fields.tasks.startImmediately.description')}
+                    </p>
+                  </div>
+
+                  {/* Scratch startup script */}
+                  <div className="space-y-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+                      <label className="text-sm text-muted-foreground sm:w-32 sm:shrink-0 sm:pt-2">
+                        {t('fields.tasks.scratchStartupScript.label')}
+                      </label>
+                      <Textarea
+                        value={localScratchStartupScript}
+                        onChange={(e) => setLocalScratchStartupScript(e.target.value)}
+                        placeholder="export ENV_VAR=value"
+                        className="font-mono text-xs min-h-[60px]"
+                        rows={2}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:ml-32 sm:pl-2">
+                      {t('fields.tasks.scratchStartupScript.description')}
                     </p>
                   </div>
                 </div>

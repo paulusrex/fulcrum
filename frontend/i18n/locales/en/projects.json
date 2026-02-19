@@ -137,7 +137,9 @@
     "summaryOpencodeOptions_other": "OpenCode: {{count}} options",
     "summaryModel": "Model",
     "description": "Configure default agent settings for this project. Repositories can override these settings.",
-    "useGlobalDefault": "Use global default"
+    "useGlobalDefault": "Use global default",
+    "startupScript": "Startup Script",
+    "startupScriptDescription": "Commands to run before agent invocation. Runs before the repository's startup script."
   },
   "repoCard": {
     "activeCount_one": "{{count}} active",

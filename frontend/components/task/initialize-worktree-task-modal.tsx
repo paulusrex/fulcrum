@@ -252,7 +252,7 @@ export function InitializeWorktreeTaskModal({ task, open, onOpenChange }: Initia
           prefix: prefix.trim() || undefined,
           worktreePath,
           copyFiles: selectedRepo?.copyFiles || undefined,
-          startupScript: selectedRepo?.startupScript || undefined,
+          startupScript: [selectedRepoProject?.startupScript, selectedRepo?.startupScript].filter(Boolean).join('\n') || undefined,
           agentOptions: agentOptions || undefined,
           opencodeModel: agent === 'opencode' ? opencodeModel : undefined,
         }),

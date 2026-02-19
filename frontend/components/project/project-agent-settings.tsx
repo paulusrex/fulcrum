@@ -18,6 +18,7 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon, ArrowDown01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { AGENT_DISPLAY_NAMES, type AgentType, type ProjectWithDetails } from '@/types'
+import { Textarea } from '@/components/ui/textarea'
 import { AgentOptionsEditor } from '@/components/repositories/agent-options-editor'
 import { ModelPicker } from '@/components/opencode/model-picker'
 import { toast } from 'sonner'
@@ -39,6 +40,7 @@ export function ProjectAgentSettings({ project }: ProjectAgentSettingsProps) {
   const [claudeOptions, setClaudeOptions] = useState<Record<string, string>>({})
   const [opencodeOptions, setOpencodeOptions] = useState<Record<string, string>>({})
   const [opencodeModel, setOpencodeModel] = useState<string | null>(null)
+  const [startupScript, setStartupScript] = useState<string>('')
   const [hasChanges, setHasChanges] = useState(false)
 
   // Initialize form state from project
@@ -48,6 +50,7 @@ export function ProjectAgentSettings({ project }: ProjectAgentSettingsProps) {
       setClaudeOptions(project.claudeOptions ?? {})
       setOpencodeOptions(project.opencodeOptions ?? {})
       setOpencodeModel(project.opencodeModel ?? null)
+      setStartupScript(project.startupScript ?? '')
       setHasChanges(false)
     }
   }, [project])
@@ -59,10 +62,11 @@ export function ProjectAgentSettings({ project }: ProjectAgentSettingsProps) {
         defaultAgent !== (project.defaultAgent ?? null) ||
         JSON.stringify(claudeOptions) !== JSON.stringify(project.claudeOptions ?? {}) ||
         JSON.stringify(opencodeOptions) !== JSON.stringify(project.opencodeOptions ?? {}) ||
-        opencodeModel !== (project.opencodeModel ?? null)
+        opencodeModel !== (project.opencodeModel ?? null) ||
+        startupScript !== (project.startupScript ?? '')
       setHasChanges(changed)
     }
-  }, [defaultAgent, claudeOptions, opencodeOptions, opencodeModel, project])
+  }, [defaultAgent, claudeOptions, opencodeOptions, opencodeModel, startupScript, project])
 
   const handleSave = () => {
     if (!project) return
@@ -75,6 +79,7 @@ export function ProjectAgentSettings({ project }: ProjectAgentSettingsProps) {
           claudeOptions: Object.keys(claudeOptions).length > 0 ? claudeOptions : null,
           opencodeOptions: Object.keys(opencodeOptions).length > 0 ? opencodeOptions : null,
           opencodeModel,
+          startupScript: startupScript.trim() || null,
         },
       },
       {
@@ -182,6 +187,20 @@ export function ProjectAgentSettings({ project }: ProjectAgentSettingsProps) {
                 <FieldDescription>
                   {tRepo('detailView.settings.defaultAgentDescription')}
                 </FieldDescription>
+              </Field>
+
+              <Field>
+                <FieldLabel>{t('agentSettings.startupScript')}</FieldLabel>
+                <FieldDescription className="mb-2">
+                  {t('agentSettings.startupScriptDescription')}
+                </FieldDescription>
+                <Textarea
+                  value={startupScript}
+                  onChange={(e) => setStartupScript(e.target.value)}
+                  placeholder="export ENV_VAR=value"
+                  className="font-mono text-xs min-h-[60px]"
+                  rows={2}
+                />
               </Field>
 
               <Field>

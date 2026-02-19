@@ -157,6 +157,7 @@ export function useUpdateProject() {
         claudeOptions?: Record<string, string> | null
         opencodeOptions?: Record<string, string> | null
         opencodeModel?: string | null
+        startupScript?: string | null
       }
     }) =>
       fetchJSON<ProjectWithDetails>(`${API_BASE}/api/projects/${id}`, {

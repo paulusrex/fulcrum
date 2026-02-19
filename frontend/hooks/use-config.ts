@@ -299,6 +299,16 @@ export function useStartWorktreeTasksImmediately() {
 /** @deprecated Use useStartWorktreeTasksImmediately instead */
 export const useStartCodeTasksImmediately = useStartWorktreeTasksImmediately
 
+export function useScratchStartupScript() {
+  const query = useConfig(CONFIG_KEYS.SCRATCH_STARTUP_SCRIPT)
+
+  return {
+    ...query,
+    data: (query.data?.value as string | null) ?? null,
+    isDefault: query.data?.isDefault ?? true,
+  }
+}
+
 // Assistant settings
 export type AssistantProvider = 'claude' | 'opencode'
 export type AssistantModel = 'opus' | 'sonnet' | 'haiku'

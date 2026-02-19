@@ -226,6 +226,7 @@ export const projects = sqliteTable('projects', {
   claudeOptions: text('claude_options'), // JSON: { [flag]: value } - CLI options for Claude Code
   opencodeOptions: text('opencode_options'), // JSON: { [flag]: value } - CLI options for OpenCode
   opencodeModel: text('opencode_model'), // OpenCode model in format 'provider/model' - null means use global default
+  startupScript: text('startup_script'), // Commands to run before agent invocation
   lastAccessedAt: text('last_accessed_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

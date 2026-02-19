@@ -44,6 +44,7 @@ export const FNOX_CONFIG_MAP: Record<string, ConfigEntry> = {
   // Tasks
   'tasks.defaultTaskType': { fnoxKey: 'FULCRUM_TASKS_DEFAULT_TYPE', provider: 'plain', type: 'string' },
   'tasks.startWorktreeTasksImmediately': { fnoxKey: 'FULCRUM_TASKS_START_IMMEDIATELY', provider: 'plain', type: 'boolean' },
+  'tasks.scratchStartupScript': { fnoxKey: 'FULCRUM_TASKS_SCRATCH_STARTUP_SCRIPT', provider: 'plain', type: 'string' },
 
   // Appearance
   'appearance.language': { fnoxKey: 'FULCRUM_APPEARANCE_LANGUAGE', provider: 'plain', type: 'string' },
