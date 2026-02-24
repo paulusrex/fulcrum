@@ -7,6 +7,7 @@ const SENSITIVE_ENV_VARS = [
   'CLOUDFLARE_API_TOKEN',
   'CLOUDFLARE_ACCOUNT_ID',
   'GITHUB_PAT',
+  'FNOX_AGE_KEY_FILE',
 ]
 
 /**
@@ -31,6 +32,7 @@ const SERVER_ENV_VARS = [
   'FULCRUM_DEVELOPER',
   'HOST',
   'BUN_PTY_LIB',
+  'FNOX_AGE_KEY_FILE',
 ]
 
 // z.ai related env vars to filter when z.ai is disabled

@@ -224,7 +224,6 @@ async function handleUpCommand(flags: Record<string, string>) {
       FULCRUM_PACKAGE_ROOT: packageRoot,
       FULCRUM_VERSION: pkg.version,
       BUN_PTY_LIB: ptyLibPath,
-      FNOX_AGE_KEY_FILE: join(fulcrumDir, 'age.txt'),
       FULCRUM_FNOX_INSTALLED: '1',
       // Pass CLI's alias-aware detection to the server (which can't detect aliases)
       ...(isClaudeInstalled() && { FULCRUM_CLAUDE_INSTALLED: '1' }),

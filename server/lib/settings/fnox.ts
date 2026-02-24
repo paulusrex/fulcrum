@@ -150,7 +150,7 @@ function getFnoxConfigPath(): string {
 }
 
 function getFnoxKeyPath(): string {
-  return process.env.FNOX_AGE_KEY_FILE || join(getFulcrumDir(), 'age.txt')
+  return join(getFulcrumDir(), 'age.txt')
 }
 
 // --- Availability ---
@@ -250,11 +250,6 @@ export function ensureFnoxBootstrap(): void {
       const updatedConfig = `[providers.plain]\ntype = "plain"\n\n${existingConfig}`
       writeFileSync(fnoxConfigPath, updatedConfig, 'utf-8')
     }
-  }
-
-  // Set FNOX_AGE_KEY_FILE if not already set
-  if (!process.env.FNOX_AGE_KEY_FILE) {
-    process.env.FNOX_AGE_KEY_FILE = ageKeyPath
   }
 
   // Reset the cached availability check so isFnoxAvailable() sees the new files
