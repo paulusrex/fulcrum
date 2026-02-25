@@ -103,6 +103,7 @@ export const DEPENDENCIES: Dependency[] = [
     required: true,
     install: {
       brew: 'brew install fnox',
+      curl: 'curl -fsSL https://github.com/jdx/fnox/releases/latest/download/fnox-$(uname -m | sed "s/arm64/aarch64/")-$(uname -s | sed "s/Darwin/apple-darwin/;s/Linux/unknown-linux-gnu/").tar.gz | tar -xz -C /tmp && install -d ~/.local/bin && install -m 755 /tmp/fnox ~/.local/bin/fnox',
     },
   },
   {

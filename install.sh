@@ -233,6 +233,111 @@ install_uv() {
     return 1
 }
 
+# Install age (encryption)
+install_age() {
+    print_step "Checking for age..."
+
+    if command -v age-keygen &> /dev/null; then
+        print_success "age is already installed"
+        return 0
+    fi
+
+    print_warning "age not found. Installing..."
+
+    # Try Homebrew first (works on both macOS and Linux)
+    if command -v brew &> /dev/null; then
+        if brew install age; then
+            print_success "age installed via Homebrew"
+            return 0
+        fi
+    fi
+
+    # Fallback to system package managers
+    if command -v apt &> /dev/null; then
+        if sudo apt install -y age; then
+            print_success "age installed via apt"
+            return 0
+        fi
+    elif command -v dnf &> /dev/null; then
+        if sudo dnf install -y age; then
+            print_success "age installed via dnf"
+            return 0
+        fi
+    elif command -v pacman &> /dev/null; then
+        if sudo pacman -S --noconfirm age; then
+            print_success "age installed via pacman"
+            return 0
+        fi
+    fi
+
+    print_warning "Could not install age automatically"
+    echo "  Install manually using your package manager"
+    return 1
+}
+
+# Install fnox (encrypted secrets management)
+install_fnox() {
+    print_step "Checking for fnox..."
+
+    if command -v fnox &> /dev/null; then
+        print_success "fnox is already installed"
+        return 0
+    fi
+
+    print_warning "fnox not found. Installing..."
+
+    # Try Homebrew first (works on both macOS and Linux)
+    if command -v brew &> /dev/null; then
+        if brew install fnox; then
+            print_success "fnox installed via Homebrew"
+            return 0
+        fi
+    fi
+
+    # Fallback: download pre-built binary from GitHub releases
+    local arch os target
+    arch=$(uname -m)
+    os=$(uname -s)
+
+    case "$os" in
+        Darwin)
+            case "$arch" in
+                x86_64) target="x86_64-apple-darwin" ;;
+                arm64|aarch64) target="aarch64-apple-darwin" ;;
+                *) print_warning "Unsupported architecture: $arch"; return 1 ;;
+            esac
+            ;;
+        Linux)
+            case "$arch" in
+                x86_64) target="x86_64-unknown-linux-gnu" ;;
+                aarch64|arm64) target="aarch64-unknown-linux-gnu" ;;
+                *) print_warning "Unsupported architecture: $arch"; return 1 ;;
+            esac
+            ;;
+        *) print_warning "Unsupported OS: $os"; return 1 ;;
+    esac
+
+    local url="https://github.com/jdx/fnox/releases/latest/download/fnox-${target}.tar.gz"
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+
+    if curl -fsSL "$url" -o "${tmp_dir}/fnox.tar.gz" && \
+       tar -xzf "${tmp_dir}/fnox.tar.gz" -C "$tmp_dir" && \
+       install -d "$HOME/.local/bin" && \
+       install -m 755 "${tmp_dir}/fnox" "$HOME/.local/bin/fnox"; then
+        rm -rf "$tmp_dir"
+        export PATH="$HOME/.local/bin:$PATH"
+        print_success "fnox installed to ~/.local/bin"
+        return 0
+    fi
+
+    rm -rf "$tmp_dir"
+
+    print_warning "Could not install fnox automatically"
+    echo "  Install manually: brew install fnox"
+    return 1
+}
+
 # Install Claude Code
 install_claude_code() {
     print_step "Checking for Claude Code..."
@@ -596,6 +701,8 @@ main() {
     echo "  - Node.js (JavaScript runtime)"
     echo "  - dtach (terminal persistence)"
     echo "  - uv (Python package manager)"
+    echo "  - age (encryption)"
+    echo "  - fnox (encrypted secrets management)"
     echo "  - AI agent (Claude Code and/or OpenCode - you choose)"
     echo "  - GitHub CLI (PR creation)"
     echo "  - Docker (app deployment)"
@@ -621,6 +728,8 @@ main() {
     install_node
     install_dtach
     install_uv
+    install_age
+    install_fnox
     select_and_install_agents
     install_gh
     install_docker
