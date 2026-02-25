@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdtempSync, rmSyn
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
-import { db, repositories, projects, apps, type NewRepository } from '../db'
+import { db, repositories, projects, apps, projectRepositories, type NewRepository } from '../db'
 import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { log } from '../lib/logger'
@@ -329,6 +329,17 @@ app.post('/create', async (c) => {
       db.update(projects)
         .set({ repositoryId: newRepoId, updatedAt: now })
         .where(eq(projects.id, existingProjectId))
+        .run()
+
+      // Link via the join table (the authoritative source for project-repo relationships)
+      db.insert(projectRepositories)
+        .values({
+          id: nanoid(),
+          projectId: existingProjectId,
+          repositoryId: newRepoId,
+          isPrimary: true,
+          createdAt: now,
+        })
         .run()
 
       log.api.info('Linked template repo to existing project', {
