@@ -208,5 +208,16 @@
   "calendar": {
     "weekly": "Weekly",
     "monthly": "Monthly"
+  },
+  "questions": {
+    "noQuestions": "No pending questions",
+    "noQuestionsHint": "Questions from AI agents will appear here during planning",
+    "askedAt": "Asked",
+    "answeredAt": "Answered",
+    "enterAnswer": "Enter your answer...",
+    "submitAnswer": "Submit Answer",
+    "yourAnswer": "Your answer",
+    "answerSaved": "Answer saved",
+    "questionRemoved": "Question removed"
   }
 }

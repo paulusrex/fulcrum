@@ -70,7 +70,7 @@ export interface FilesViewState {
 }
 
 export interface ViewState {
-  activeTab: 'diff' | 'browser' | 'files' | 'details'
+  activeTab: 'diff' | 'browser' | 'files' | 'details' | 'questions'
   browserUrl: string
   diffOptions: DiffOptions
   filesViewState: FilesViewState
@@ -132,9 +132,25 @@ export interface Task {
   recurrenceEndDate: string | null
   recurrenceSourceTaskId: string | null
   notes: string | null // Free-form notes/comments
+  questions?: TaskQuestion[] | null // Questions from AI agents
   createdAt: string
   updatedAt: string
   links?: TaskLink[]
+}
+
+// Task question from AI agents during planning
+export interface TaskQuestion {
+  id: string
+  question: string
+  options?: TaskQuestionOption[]
+  answer?: string | null
+  askedAt: string
+  answeredAt?: string | null
+}
+
+export interface TaskQuestionOption {
+  label: string
+  description?: string
 }
 
 // Tag - reusable tags shared between tasks and projects

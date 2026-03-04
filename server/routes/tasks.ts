@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { nanoid } from 'nanoid'
-import { db, tasks, repositories, taskLinks, taskRelationships, taskAttachments, tags, taskTags, type Task, type NewTask, type TaskLink } from '../db'
+import { db, tasks, repositories, taskLinks, taskRelationships, taskAttachments, tags, taskTags, type Task, type NewTask, type TaskLink, type TaskQuestion } from '../db'
 import { eq, asc, and, inArray } from 'drizzle-orm'
 import { detectLinkType } from '../lib/link-utils'
 import { execSync } from 'child_process'
@@ -122,12 +122,13 @@ function getTaskTags(taskId: string): string[] {
 function toApiResponse(
   task: Task,
   includeLinks = false
-): Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[] } {
-  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[] } = {
+): Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[]; questions: TaskQuestion[] | null } {
+  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[]; questions: TaskQuestion[] | null } = {
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
     agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
     tags: getTaskTags(task.id),
+    questions: task.questions ? JSON.parse(task.questions) : null,
   }
   if (includeLinks) {
     response.links = getTaskLinks(task.id)
@@ -1327,6 +1328,105 @@ app.delete('/:id/attachments/:attachmentId', (c) => {
 
   // Delete from DB
   db.delete(taskAttachments).where(eq(taskAttachments.id, attachmentId)).run()
+  broadcast({ type: 'task:updated', payload: { taskId } })
+
+  return c.json({ success: true })
+})
+
+// GET /api/tasks/:id/questions - Get questions for a task
+app.get('/:id/questions', (c) => {
+  const taskId = c.req.param('id')
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  const questions = task.questions ?? []
+  return c.json(questions)
+})
+
+// POST /api/tasks/:id/questions - Add a question to a task
+app.post('/:id/questions', (c) => {
+  const taskId = c.req.param('id')
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  return c.json({ error: 'Not implemented - use task update endpoint' }, 501)
+})
+
+// PATCH /api/tasks/:id/questions/:questionId - Answer a question
+app.patch('/:id/questions/:questionId', async (c) => {
+  const taskId = c.req.param('id')
+  const questionId = c.req.param('questionId')
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  const body = await c.req.json<{ answer: string }>()
+  const questions = (task.questions ?? []) as TaskQuestion[]
+
+  const questionIndex = questions.findIndex(q => q.id === questionId)
+  if (questionIndex === -1) {
+    return c.json({ error: 'Question not found' }, 404)
+  }
+
+  // Update the question with the answer
+  questions[questionIndex] = {
+    ...questions[questionIndex],
+    answer: body.answer,
+    answeredAt: new Date().toISOString(),
+  }
+
+  const now = new Date().toISOString()
+  db.update(tasks)
+    .set({
+      questions: JSON.stringify(questions),
+      updatedAt: now,
+    })
+    .where(eq(tasks.id, taskId))
+    .run()
+
+  reindexTaskFTS(taskId)
+  broadcast({ type: 'task:updated', payload: { taskId } })
+
+  return c.json(questions[questionIndex])
+})
+
+// DELETE /api/tasks/:id/questions/:questionId - Remove a question
+app.delete('/:id/questions/:questionId', (c) => {
+  const taskId = c.req.param('id')
+  const questionId = c.req.param('questionId')
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  const questions = (task.questions ?? []) as TaskQuestion[]
+  const questionIndex = questions.findIndex(q => q.id === questionId)
+  if (questionIndex === -1) {
+    return c.json({ error: 'Question not found' }, 404)
+  }
+
+  // Remove the question
+  questions.splice(questionIndex, 1)
+
+  const now = new Date().toISOString()
+  db.update(tasks)
+    .set({
+      questions: questions.length > 0 ? JSON.stringify(questions) : null,
+      updatedAt: now,
+    })
+    .where(eq(tasks.id, taskId))
+    .run()
+
+  reindexTaskFTS(taskId)
   broadcast({ type: 'task:updated', payload: { taskId } })
 
   return c.json({ success: true })
