@@ -183,7 +183,7 @@ export const DEFAULT_SETTINGS: Settings = {
     opencodeModel: null,
     opencodeDefaultAgent: 'build',
     opencodePlanAgent: 'plan',
-    autoScrollToBottom: true,
+    autoScrollToBottom: false,
     claudeCodePath: null,
   },
   tasks: {
