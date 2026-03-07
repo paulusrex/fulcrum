@@ -5,6 +5,7 @@ import {
   QuestionCircleIcon,
   CheckmarkCircle02Icon,
   Delete02Icon,
+  Loading03Icon,
 } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { useTaskQuestions, useAnswerQuestion, useDeleteQuestion } from '@/hooks/use-task-questions'
 import type { Task } from '@shared/types'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface TaskQuestionsPanelProps {
   task: Task
@@ -27,7 +29,12 @@ export function TaskQuestionsPanel({ task }: TaskQuestionsPanelProps) {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground">{t('common.loading')}</p>
+        <HugeiconsIcon
+          icon={Loading03Icon}
+          size={24}
+          strokeWidth={2}
+          className="animate-spin text-muted-foreground"
+        />
       </div>
     )
   }
@@ -41,6 +48,10 @@ export function TaskQuestionsPanel({ task }: TaskQuestionsPanelProps) {
       </div>
     )
   }
+
+  // Track which specific question is being answered/deleted
+  const answeringId = answerQuestion.variables?.questionId ?? null
+  const deletingId = deleteQuestion.variables?.questionId ?? null
 
   return (
     <div className="flex h-full flex-col overflow-auto p-4">
@@ -67,8 +78,9 @@ export function TaskQuestionsPanel({ task }: TaskQuestionsPanelProps) {
                 }
               )
             }}
-            isAnswering={answerQuestion.isPending}
-            isDeleting={deleteQuestion.isPending}
+            isAnswering={answeringId === question.id && answerQuestion.isPending}
+            isDeleting={deletingId === question.id && deleteQuestion.isPending}
+            isDisabled={answerQuestion.isPending || deleteQuestion.isPending}
           />
         ))}
       </div>
@@ -89,9 +101,10 @@ interface QuestionCardProps {
   onDelete: () => void
   isAnswering: boolean
   isDeleting: boolean
+  isDisabled: boolean
 }
 
-function QuestionCard({ question, onAnswer, onDelete, isAnswering, isDeleting }: QuestionCardProps) {
+function QuestionCard({ question, onAnswer, onDelete, isAnswering, isDeleting, isDisabled }: QuestionCardProps) {
   const { t } = useTranslation('common')
   const [selectedOption, setSelectedOption] = useState(question.answer ?? '')
   const [textAnswer, setTextAnswer] = useState(question.answer ?? '')
@@ -109,11 +122,13 @@ function QuestionCard({ question, onAnswer, onDelete, isAnswering, isDeleting }:
 
   return (
     <div
-      className={`rounded-lg border p-4 ${
+      className={cn(
+        'rounded-lg border p-4 transition-opacity',
         isAnswered
           ? 'border-border/50 bg-muted/30 opacity-70'
-          : 'border-border bg-card'
-      }`}
+          : 'border-border bg-card',
+        isDeleting && 'opacity-50'
+      )}
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="flex-1">
@@ -126,7 +141,7 @@ function QuestionCard({ question, onAnswer, onDelete, isAnswering, isDeleting }:
                 className="text-green-500"
               />
             )}
-            <p className={`text-sm font-medium ${isAnswered ? 'text-muted-foreground' : ''}`}>
+            <p className={cn('text-sm font-medium', isAnswered && 'text-muted-foreground')}>
               {question.question}
             </p>
           </div>
@@ -144,9 +159,13 @@ function QuestionCard({ question, onAnswer, onDelete, isAnswering, isDeleting }:
           size="icon-sm"
           className="shrink-0 text-muted-foreground hover:text-destructive"
           onClick={onDelete}
-          disabled={isDeleting}
+          disabled={isDeleting || isDisabled}
         >
-          <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+          {isDeleting ? (
+            <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="animate-spin" />
+          ) : (
+            <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+          )}
         </Button>
       </div>
 
@@ -181,15 +200,23 @@ function QuestionCard({ question, onAnswer, onDelete, isAnswering, isDeleting }:
               onChange={(e) => setTextAnswer(e.target.value)}
               placeholder={t('questions.enterAnswer', 'Enter your answer...')}
               className="mb-3 min-h-[80px]"
+              disabled={isDisabled}
             />
           )}
 
           <Button
             size="sm"
             onClick={handleSubmit}
-            disabled={isAnswering || (question.options ? !selectedOption : !textAnswer.trim())}
+            disabled={isAnswering || isDisabled || (question.options ? !selectedOption : !textAnswer.trim())}
           >
-            {isAnswering ? t('common.saving') : t('questions.submitAnswer', 'Submit Answer')}
+            {isAnswering ? (
+              <>
+                <HugeiconsIcon icon={Loading03Icon} size={14} strokeWidth={2} className="mr-2 animate-spin" />
+                {t('common.saving', 'Saving...')}
+              </>
+            ) : (
+              t('questions.submitAnswer', 'Submit Answer')
+            )}
           </Button>
         </>
       )}
