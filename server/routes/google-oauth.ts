@@ -8,6 +8,7 @@
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import { db, googleAccounts } from '../db'
+import { googleCalendarManager } from '../services/google/google-calendar-manager'
 import { getSettings } from '../lib/settings'
 import {
   createOAuth2Client,
@@ -203,6 +204,17 @@ app.get('/callback', async (c) => {
         accountId: state.accountId,
         email,
       })
+
+      // Restart sync if calendar was enabled before re-auth
+      const account = db.select().from(googleAccounts).where(eq(googleAccounts.id, state.accountId)).get()
+      if (account?.calendarEnabled) {
+        googleCalendarManager.startAccount(state.accountId).catch((err) => {
+          logger.error('Failed to restart calendar sync after re-auth', {
+            accountId: state.accountId,
+            error: err instanceof Error ? err.message : String(err),
+          })
+        })
+      }
     } else {
       // New account
       const accountId = crypto.randomUUID()

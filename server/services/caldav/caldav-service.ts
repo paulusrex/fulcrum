@@ -10,7 +10,7 @@
  */
 
 import { eq, and, gte, lte, desc, isNull } from 'drizzle-orm'
-import { db, caldavAccounts, caldavCalendars, caldavEvents, caldavCopyRules, caldavCopiedEvents } from '../../db'
+import { db, caldavAccounts, caldavCalendars, caldavEvents, caldavCopyRules, caldavCopiedEvents, googleAccounts } from '../../db'
 import type { CaldavAccount, CaldavCalendar, CaldavEvent, CaldavCopyRule } from '../../db'
 import type { CalDavOAuthTokens } from '../../lib/settings/types'
 import { getSettings } from '../../lib/settings'
@@ -483,7 +483,25 @@ export function listCalendars(accountId?: string): CaldavCalendar[] {
 }
 
 export async function syncCalendars(): Promise<void> {
+  // Sync CalDAV accounts
   await accountManager.syncAll()
+
+  // Sync Google Calendar accounts
+  const { googleCalendarManager } = await import('../google/google-calendar-manager')
+  const googleAccountRows = db
+    .select()
+    .from(googleAccounts)
+    .all()
+    .filter((a) => a.calendarEnabled)
+  for (const account of googleAccountRows) {
+    await googleCalendarManager.syncAccount(account.id).catch((err) => {
+      logger.error('Google Calendar sync failed during manual sync', {
+        accountId: account.id,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+  }
+
   await executeCopyRules().catch((err) => {
     logger.error('Copy rules failed after sync', {
       error: err instanceof Error ? err.message : String(err),
