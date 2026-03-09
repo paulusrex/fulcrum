@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync, chmodSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, chmodSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import { CliError, ExitCodes } from './errors'
 
@@ -7,12 +7,20 @@ import { CliError, ExitCodes } from './errors'
  * Ensure fnox is set up in the given Fulcrum directory.
  *
  * 1. Generate age key if it doesn't exist
- * 2. Create fnox.toml with age provider if it doesn't exist
+ * 2. Create .fnox.toml with age provider if it doesn't exist
  * 3. Verify the setup works with a round-trip test
  */
 export function ensureFnoxSetup(fulcrumDir: string): void {
+  // Migrate fnox.toml → .fnox.toml (prevent auto-discovery in worktrees)
+  const oldFnoxPath = join(fulcrumDir, 'fnox.toml')
+  const newFnoxPath = join(fulcrumDir, '.fnox.toml')
+  if (existsSync(oldFnoxPath) && !existsSync(newFnoxPath)) {
+    renameSync(oldFnoxPath, newFnoxPath)
+    console.error('Migrated fnox.toml → .fnox.toml')
+  }
+
   const ageKeyPath = join(fulcrumDir, 'age.txt')
-  const fnoxConfigPath = join(fulcrumDir, 'fnox.toml')
+  const fnoxConfigPath = join(fulcrumDir, '.fnox.toml')
 
   // Step 1: Generate age key if needed
   let publicKey: string
@@ -50,7 +58,7 @@ export function ensureFnoxSetup(fulcrumDir: string): void {
     publicKey = match[1]
   }
 
-  // Step 2: Create fnox.toml if needed, or ensure plain provider exists
+  // Step 2: Create .fnox.toml if needed, or ensure plain provider exists
   if (!existsSync(fnoxConfigPath)) {
     console.error('Creating fnox configuration...')
     const config = `[providers.plain]\ntype = "plain"\n\n[providers.age]\ntype = "age"\nrecipients = ["${publicKey}"]\n`

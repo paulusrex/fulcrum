@@ -227,10 +227,10 @@ ALTER TABLE `tasks` ADD `new_column` text;
 
 ## Configuration
 
-All configuration stored in `~/.fulcrum/fnox.toml` using fnox. See `server/lib/settings/types.ts` for the schema and `server/lib/settings/fnox.ts` for the fnox config map.
+All configuration stored in `~/.fulcrum/.fnox.toml` using fnox. See `server/lib/settings/types.ts` for the schema and `server/lib/settings/fnox.ts` for the fnox config map.
 
 **Configuration architecture:**
-- `fnox.toml` is the single source of truth for ALL configuration (~80 settings)
+- `.fnox.toml` is the single source of truth for ALL configuration (~80 settings)
 - Non-sensitive values use `plain` provider (readable without decryption)
 - Sensitive values (API keys, tokens, webhook URLs) use `age` provider (encrypted)
 - In-memory cache for fast access (loaded via `fnox export` at startup)
@@ -251,7 +251,7 @@ All configuration stored in `~/.fulcrum/fnox.toml` using fnox. See `server/lib/s
 - `zai` - z.ai integration settings
 
 **Config files:**
-- `fnox.toml` - All configuration (plain + encrypted values)
+- `.fnox.toml` - All configuration (plain + encrypted values)
 - `age.txt` - Age private key for fnox encryption (generated once on first `fulcrum up`, never committed)
 
 **Migration:**
@@ -261,7 +261,7 @@ All configuration stored in `~/.fulcrum/fnox.toml` using fnox. See `server/lib/s
 - Implementation: `server/lib/settings/fnox.ts` (config map, CLI wrapper, cache), `server/lib/settings/migrate-to-fnox.ts` (migration logic)
 
 **Backup/restore:**
-- Backups now include `fnox.toml` + `age.txt` (no more settings.json)
+- Backups now include `.fnox.toml` + `age.txt` (no more settings.json)
 - Restoring a backup restores the entire fnox configuration
 
 Environment variables override fnox values where applicable.

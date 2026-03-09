@@ -11,7 +11,7 @@ const app = new OpenAPIHono()
 // ~/.fulcrum/backups/
 //   2024-01-15T10-30-00/
 //     fulcrum.db
-//     fnox.toml
+//     fnox.toml       (archive name; on disk it's .fnox.toml)
 //     age.txt
 //     manifest.json  (metadata about the backup)
 
@@ -163,8 +163,8 @@ app.openapi(createBackupRoute, async (c) => {
       }
     }
 
-    // Copy fnox.toml
-    const fnoxConfigPath = path.join(fulcrumDir, 'fnox.toml')
+    // Copy .fnox.toml (stored as fnox.toml in backup for backward compat)
+    const fnoxConfigPath = path.join(fulcrumDir, '.fnox.toml')
     if (fs.existsSync(fnoxConfigPath)) {
       fs.copyFileSync(fnoxConfigPath, path.join(backupPath, 'fnox.toml'))
       manifest.files.fnoxConfig = true
@@ -337,9 +337,9 @@ app.openapi(restoreRoute, async (c) => {
     // Restore fnox config and age key
     if (restoreConfig) {
       const fnoxConfigBackup = path.join(backupPath, 'fnox.toml')
-      const fnoxConfigPath = path.join(fulcrumDir, 'fnox.toml')
+      const fnoxConfigPath = path.join(fulcrumDir, '.fnox.toml')
       if (manifest.files.fnoxConfig && fs.existsSync(fnoxConfigBackup)) {
-        // Backup current
+        // Backup current (stored as fnox.toml in backup for backward compat)
         if (fs.existsSync(fnoxConfigPath)) {
           fs.copyFileSync(fnoxConfigPath, path.join(preRestoreBackupPath, 'fnox.toml'))
           preRestoreManifest.files.fnoxConfig = true

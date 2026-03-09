@@ -17,7 +17,7 @@ function expandPath(p: string): string {
  * Uses fnox CLI directly (no server dependency).
  */
 function getPortFromFnox(fulcrumDir: string): number | null {
-  const fnoxConfigPath = join(fulcrumDir, 'fnox.toml')
+  const fnoxConfigPath = join(fulcrumDir, '.fnox.toml')
   const ageKeyPath = join(fulcrumDir, 'age.txt')
 
   if (!existsSync(fnoxConfigPath) || !existsSync(ageKeyPath)) return null
@@ -47,9 +47,9 @@ function getPortFromFnox(fulcrumDir: string): number | null {
  * 1. Explicit URL override (--url flag)
  * 2. Explicit port override (--port flag)
  * 3. FULCRUM_URL environment variable
- * 4. FULCRUM_DIR fnox.toml (read port)
- * 5. .fulcrum/fnox.toml in CWD (read port)
- * 6. ~/.fulcrum/fnox.toml (read port)
+ * 4. FULCRUM_DIR .fnox.toml (read port)
+ * 5. .fulcrum/.fnox.toml in CWD (read port)
+ * 6. ~/.fulcrum/.fnox.toml (read port)
  * 7. Default: http://localhost:7777
  */
 export function discoverServerUrl(urlOverride?: string, portOverride?: string): string {
@@ -68,20 +68,20 @@ export function discoverServerUrl(urlOverride?: string, portOverride?: string): 
     return process.env.FULCRUM_URL
   }
 
-  // 4. FULCRUM_DIR fnox.toml
+  // 4. FULCRUM_DIR .fnox.toml
   if (process.env.FULCRUM_DIR) {
     const port = getPortFromFnox(expandPath(process.env.FULCRUM_DIR))
     if (port) return `http://localhost:${port}`
   }
 
-  // 5. Local .fulcrum/fnox.toml
+  // 5. Local .fulcrum/.fnox.toml
   const cwdFulcrum = join(process.cwd(), '.fulcrum')
   if (existsSync(cwdFulcrum)) {
     const port = getPortFromFnox(cwdFulcrum)
     if (port) return `http://localhost:${port}`
   }
 
-  // 6. Global ~/.fulcrum/fnox.toml
+  // 6. Global ~/.fulcrum/.fnox.toml
   const globalFulcrum = join(homedir(), '.fulcrum')
   const port = getPortFromFnox(globalFulcrum)
   if (port) return `http://localhost:${port}`
@@ -96,7 +96,7 @@ export function discoverServerUrl(urlOverride?: string, portOverride?: string): 
  */
 export function updateSettingsPort(port: number): void {
   const fulcrumDir = getFulcrumDir()
-  const fnoxConfigPath = join(fulcrumDir, 'fnox.toml')
+  const fnoxConfigPath = join(fulcrumDir, '.fnox.toml')
   const ageKeyPath = join(fulcrumDir, 'age.txt')
 
   // Ensure directory exists

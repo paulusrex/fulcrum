@@ -316,7 +316,7 @@ For browser-only access, use Tailscale or Cloudflare Tunnels to expose your serv
 <details>
 <summary><strong>Configuration</strong></summary>
 
-All configuration is managed by [fnox](https://github.com/yarlson/fnox) — a single `fnox.toml` file stores both plain and encrypted settings. Sensitive credentials (API keys, tokens, webhook URLs) are encrypted with age; the age key (`age.txt`) lives alongside `fnox.toml` in the fulcrum directory. Existing `settings.json` files are automatically migrated to fnox on server start.
+All configuration is managed by [fnox](https://github.com/yarlson/fnox) — a single `.fnox.toml` file stores both plain and encrypted settings. Sensitive credentials (API keys, tokens, webhook URLs) are encrypted with age; the age key (`age.txt`) lives alongside `.fnox.toml` in the fulcrum directory. Existing `settings.json` files are automatically migrated to fnox on server start.
 
 The fulcrum directory is resolved in this order:
 
