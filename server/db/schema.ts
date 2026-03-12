@@ -33,9 +33,25 @@ export const tasks = sqliteTable('tasks', {
   recurrenceSourceTaskId: text('recurrence_source_task_id'), // FK to parent task (lineage chain)
   type: text('type'), // 'worktree' | 'scratch' | null (null = manual/legacy)
   notes: text('notes'), // Free-form notes/comments
+  questions: text('questions', { mode: 'json' }).$type<TaskQuestion[] | null>(), // Questions from AI agents
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 })
+
+// Task question type for JSON storage
+export type TaskQuestion = {
+  id: string
+  question: string
+  options?: TaskQuestionOption[]
+  answer?: string | null
+  askedAt: string
+  answeredAt?: string | null
+}
+
+export type TaskQuestionOption = {
+  label: string
+  description?: string
+}
 
 // Task relationships - tracks relationships between tasks (dependencies, related, subtasks)
 export const taskRelationships = sqliteTable('task_relationships', {

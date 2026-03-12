@@ -29,6 +29,8 @@ import { FilesViewer } from '@/components/viewer/files-viewer'
 import { GitStatusBadge } from '@/components/viewer/git-status-badge'
 import { ManualTaskView } from '@/components/task/manual-task-view'
 import { TaskDetailsPanel } from '@/components/task/task-details-panel'
+import { TaskQuestionsPanel } from '@/components/task/task-questions-panel'
+import { useTaskQuestions } from '@/hooks/use-task-questions'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   CodeIcon,
@@ -51,6 +53,7 @@ import {
   File01Icon,
   SourceCodeCircleIcon,
   Loading03Icon,
+  QuestionCircleIcon,
 } from '@hugeicons/core-free-icons'
 import type { TaskLinkType } from '@/types'
 import { DeleteTaskDialog } from '@/components/delete-task-dialog'
@@ -66,7 +69,7 @@ import {
 import type { TaskStatus } from '@/types'
 import { useIsMobile } from '@/hooks/use-is-mobile'
 
-type TabType = 'diff' | 'browser' | 'files' | 'details'
+type TabType = 'diff' | 'browser' | 'files' | 'details' | 'questions'
 
 interface TaskViewSearch {
   tab?: TabType
@@ -76,7 +79,7 @@ interface TaskViewSearch {
 export const Route = createFileRoute('/tasks/$taskId')({
   component: TaskView,
   validateSearch: (search: Record<string, unknown>): TaskViewSearch => ({
-    tab: ['diff', 'browser', 'files', 'details'].includes(search.tab as string)
+    tab: ['diff', 'browser', 'files', 'details', 'questions'].includes(search.tab as string)
       ? (search.tab as TabType)
       : undefined,
     file: typeof search.file === 'string' ? search.file : undefined,
@@ -136,6 +139,7 @@ function TaskView() {
   const { data: globalOpencodeModel } = useOpencodeModel()
   const { data: scratchStartupScript } = useScratchStartupScript()
   const { data: repositories = [] } = useRepositories()
+  const { data: questions = [] } = useTaskQuestions(taskId)
 
   // Find the repository matching this task's repo path
   const repository = repositories.find((r) => r.path === task?.repoPath)
@@ -172,6 +176,9 @@ function TaskView() {
   const isWorktreeTask = !!task?.worktreePath && task?.type !== 'scratch'
   const isScratchTask = task?.type === 'scratch'
   const hasTerminal = isWorktreeTask || isScratchTask
+
+  // Count unanswered questions for badge
+  const unansweredCount = questions.filter(q => q.answer == null).length
 
   // Determine the active tab - URL takes precedence, then database state
   // For scratch tasks, default to 'files' instead of 'diff' (no git diff available)
@@ -1014,6 +1021,15 @@ function TaskView() {
                     <HugeiconsIcon icon={More03Icon} size={14} strokeWidth={2} data-slot="icon" />
                     Details
                   </TabsTrigger>
+                  <TabsTrigger value="questions" className="relative">
+                    <HugeiconsIcon icon={QuestionCircleIcon} size={14} strokeWidth={2} data-slot="icon" />
+                    Questions
+                    {unansweredCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                        {unansweredCount}
+                      </span>
+                    )}
+                  </TabsTrigger>
                 </TabsList>
                 {!isScratchTask && <GitStatusBadge worktreePath={task.worktreePath} />}
               </div>
@@ -1038,6 +1054,10 @@ function TaskView() {
 
               <TabsContent value="details" className="flex-1 overflow-hidden">
                 <TaskDetailsPanel task={task} />
+              </TabsContent>
+
+              <TabsContent value="questions" className="flex-1 overflow-hidden">
+                <TaskQuestionsPanel task={task} />
               </TabsContent>
             </Tabs>
           </TabsContent>
@@ -1107,6 +1127,20 @@ function TaskView() {
                     />
                     Details
                   </TabsTrigger>
+                  <TabsTrigger value="questions" className="relative">
+                    <HugeiconsIcon
+                      icon={QuestionCircleIcon}
+                      size={14}
+                      strokeWidth={2}
+                      data-slot="icon"
+                    />
+                    Questions
+                    {unansweredCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                        {unansweredCount}
+                      </span>
+                    )}
+                  </TabsTrigger>
                 </TabsList>
                 {!isScratchTask && <GitStatusBadge worktreePath={task.worktreePath} />}
               </div>
@@ -1131,6 +1165,10 @@ function TaskView() {
 
               <TabsContent value="details" className="flex-1 overflow-hidden">
                 <TaskDetailsPanel task={task} />
+              </TabsContent>
+
+              <TabsContent value="questions" className="flex-1 overflow-hidden">
+                <TaskQuestionsPanel task={task} />
               </TabsContent>
             </Tabs>
           </ResizablePanel>

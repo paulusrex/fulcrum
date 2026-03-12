@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { nanoid } from 'nanoid'
-import { db, tasks, repositories, taskLinks, taskRelationships, taskAttachments, tags, taskTags, type Task, type NewTask, type TaskLink } from '../db'
+import { z } from 'zod'
+import { db, tasks, repositories, taskLinks, taskRelationships, taskAttachments, tags, taskTags, type Task, type NewTask, type TaskLink, type TaskQuestion } from '../db'
 import { eq, asc, and, inArray } from 'drizzle-orm'
 import { detectLinkType } from '../lib/link-utils'
 import { execSync } from 'child_process'
@@ -122,12 +123,13 @@ function getTaskTags(taskId: string): string[] {
 function toApiResponse(
   task: Task,
   includeLinks = false
-): Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[] } {
-  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[] } = {
+): Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[]; questions: TaskQuestion[] | null } {
+  const response: Task & { viewState: unknown; agentOptions: Record<string, string> | null; tags: string[]; links?: TaskLink[]; questions: TaskQuestion[] | null } = {
     ...task,
     viewState: task.viewState ? JSON.parse(task.viewState) : null,
     agentOptions: task.agentOptions ? JSON.parse(task.agentOptions) : null,
     tags: getTaskTags(task.id),
+    questions: task.questions ? JSON.parse(task.questions) : null,
   }
   if (includeLinks) {
     response.links = getTaskLinks(task.id)
@@ -1365,6 +1367,228 @@ app.delete('/:id/attachments/:attachmentId', (c) => {
   broadcast({ type: 'task:updated', payload: { taskId } })
 
   return c.json({ success: true })
+})
+
+// ==================== QUESTIONS VALIDATION ====================
+
+const AnswerQuestionSchema = z.object({
+  answer: z.string().min(1, 'Answer cannot be empty').max(2000, 'Answer too long'),
+})
+
+const AddQuestionSchema = z.object({
+  question: z.string().min(1, 'Question cannot be empty').max(1000, 'Question too long'),
+  options: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(200),
+        description: z.string().max(500).optional(),
+      })
+    )
+    .optional(),
+})
+
+// ==================== QUESTIONS HELPERS ====================
+
+/**
+ * Safely parse questions JSON with error handling
+ */
+function parseQuestionsSafe(questionsJson: unknown): TaskQuestion[] {
+  if (!questionsJson) return []
+
+  try {
+    const parsed = typeof questionsJson === 'string' ? JSON.parse(questionsJson) : questionsJson
+
+    if (!Array.isArray(parsed)) {
+      console.error('Questions is not an array:', typeof parsed)
+      return []
+    }
+
+    // Basic validation of each question
+    return parsed.filter(
+      (q) =>
+        q &&
+        typeof q === 'object' &&
+        typeof q.id === 'string' &&
+        typeof q.question === 'string' &&
+        typeof q.askedAt === 'string'
+    ) as TaskQuestion[]
+  } catch (error) {
+    console.error('Failed to parse questions JSON:', error)
+    return []
+  }
+}
+
+// ==================== QUESTIONS ROUTES ====================
+
+// GET /api/tasks/:id/questions - Get questions for a task
+app.get('/:id/questions', (c) => {
+  const taskId = c.req.param('id')
+
+  const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+  if (!task) {
+    return c.json({ error: 'Task not found' }, 404)
+  }
+
+  const questions = parseQuestionsSafe(task.questions)
+  return c.json(questions)
+})
+
+// POST /api/tasks/:id/questions - Add a question to a task
+app.post('/:id/questions', async (c) => {
+  const taskId = c.req.param('id')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    // Validate request body
+    const rawBody = await c.req.json()
+    const validationResult = AddQuestionSchema.safeParse(rawBody)
+
+    if (!validationResult.success) {
+      return c.json({ error: 'Validation failed', details: validationResult.error.flatten() }, 400)
+    }
+
+    const { question, options } = validationResult.data
+
+    // Parse existing questions safely
+    const questions = parseQuestionsSafe(task.questions)
+
+    // Create new question
+    const newQuestion: TaskQuestion = {
+      id: crypto.randomUUID(),
+      question,
+      options,
+      answer: null,
+      askedAt: new Date().toISOString(),
+    }
+
+    questions.push(newQuestion)
+
+    const now = new Date().toISOString()
+    db.update(tasks)
+      .set({
+        questions: JSON.stringify(questions),
+        updatedAt: now,
+      })
+      .where(eq(tasks.id, taskId))
+      .run()
+
+    reindexTaskFTS(taskId)
+    broadcast({ type: 'task:updated', payload: { taskId } })
+
+    return c.json(newQuestion, 201)
+  } catch (error) {
+    console.error('Failed to add question:', error)
+    return c.json({ error: 'Failed to add question' }, 500)
+  }
+})
+
+// PATCH /api/tasks/:id/questions/:questionId - Answer a question
+app.patch('/:id/questions/:questionId', async (c) => {
+  const taskId = c.req.param('id')
+  const questionId = c.req.param('questionId')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    // Validate request body
+    const rawBody = await c.req.json()
+    const validationResult = AnswerQuestionSchema.safeParse(rawBody)
+
+    if (!validationResult.success) {
+      return c.json({ error: 'Validation failed', details: validationResult.error.flatten() }, 400)
+    }
+
+    const { answer } = validationResult.data
+
+    // Parse existing questions safely
+    const questions = parseQuestionsSafe(task.questions)
+
+    const questionIndex = questions.findIndex((q) => q.id === questionId)
+    if (questionIndex === -1) {
+      return c.json({ error: 'Question not found' }, 404)
+    }
+
+    // Validate answer against options if they exist
+    const question = questions[questionIndex]
+    if (question.options && question.options.length > 0) {
+      const validOption = question.options.some((opt) => opt.label === answer)
+      if (!validOption) {
+        return c.json({ error: 'Invalid answer: must match one of the provided options' }, 400)
+      }
+    }
+
+    // Update the question with the answer
+    questions[questionIndex] = {
+      ...questions[questionIndex],
+      answer,
+      answeredAt: new Date().toISOString(),
+    }
+
+    const now = new Date().toISOString()
+    db.update(tasks)
+      .set({
+        questions: JSON.stringify(questions),
+        updatedAt: now,
+      })
+      .where(eq(tasks.id, taskId))
+      .run()
+
+    reindexTaskFTS(taskId)
+    broadcast({ type: 'task:updated', payload: { taskId } })
+
+    return c.json(questions[questionIndex])
+  } catch (error) {
+    console.error('Failed to answer question:', error)
+    return c.json({ error: 'Failed to answer question' }, 500)
+  }
+})
+
+// DELETE /api/tasks/:id/questions/:questionId - Remove a question
+app.delete('/:id/questions/:questionId', (c) => {
+  const taskId = c.req.param('id')
+  const questionId = c.req.param('questionId')
+
+  try {
+    const task = db.select().from(tasks).where(eq(tasks.id, taskId)).get()
+    if (!task) {
+      return c.json({ error: 'Task not found' }, 404)
+    }
+
+    // Parse existing questions safely
+    const questions = parseQuestionsSafe(task.questions)
+
+    const questionIndex = questions.findIndex((q) => q.id === questionId)
+    if (questionIndex === -1) {
+      return c.json({ error: 'Question not found' }, 404)
+    }
+
+    // Remove the question
+    questions.splice(questionIndex, 1)
+
+    const now = new Date().toISOString()
+    db.update(tasks)
+      .set({
+        questions: questions.length > 0 ? JSON.stringify(questions) : null,
+        updatedAt: now,
+      })
+      .where(eq(tasks.id, taskId))
+      .run()
+
+    reindexTaskFTS(taskId)
+    broadcast({ type: 'task:updated', payload: { taskId } })
+
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('Failed to delete question:', error)
+    return c.json({ error: 'Failed to delete question' }, 500)
+  }
 })
 
 export default app

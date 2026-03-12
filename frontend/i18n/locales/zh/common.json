@@ -208,5 +208,16 @@
   "calendar": {
     "weekly": "周视图",
     "monthly": "月视图"
+  },
+  "questions": {
+    "noQuestions": "没有待回答的问题",
+    "noQuestionsHint": "AI 代理在规划阶段提出的问题将显示在这里",
+    "askedAt": "提问于",
+    "answeredAt": "回答于",
+    "enterAnswer": "输入您的回答...",
+    "submitAnswer": "提交回答",
+    "yourAnswer": "您的回答",
+    "answerSaved": "回答已保存",
+    "questionRemoved": "问题已移除"
   }
 }
