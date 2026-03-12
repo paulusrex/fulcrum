@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { db } from '../db'
 import { systemMetrics } from '../db/schema'
-import { lt } from 'drizzle-orm'
+import { desc, lt } from 'drizzle-orm'
 import { log } from '../lib/logger'
 
 const COLLECT_INTERVAL = 5_000 // 5 seconds
@@ -330,7 +330,7 @@ export function getCurrentMetrics(): {
   const latest = db
     .select()
     .from(systemMetrics)
-    .orderBy(systemMetrics.timestamp)
+    .orderBy(desc(systemMetrics.timestamp))
     .limit(1)
     .all()
 
