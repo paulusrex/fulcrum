@@ -1,6 +1,6 @@
 ---
 name: fulcrum
-description: AI orchestration and task management platform. Use this skill when working in a Fulcrum task worktree, managing tasks/projects, or interacting with the Fulcrum server.
+description: AI orchestration and task management platform. Use this skill when working in a Fulcrum task worktree, managing tasks/projects, querying task lists (overdue, by status, by tag), checking task details, or interacting with the Fulcrum server. Triggers: "fulcrum tasks", "list tasks", "overdue tasks", "task status", "my tasks", "what tasks".
 ---
 
 # Fulcrum - AI Orchestration Platform
@@ -14,7 +14,7 @@ Use the Fulcrum CLI when:
 - **Linking URLs** — Attach relevant URLs (design docs, specs, external resources) to the task
 - **Sending notifications** — Alert the user when work is complete or needs attention
 - **Server management** — Start, stop, and check server status
-- **API access** — Query or modify any Fulcrum data via `mcp2cli`
+- **API access** — Query or modify any Fulcrum data via `fulcrum <tool>`
 
 ## CLI Commands
 
@@ -65,43 +65,43 @@ fulcrum status      # Check if server is running
 fulcrum doctor      # Check all dependencies and versions
 ```
 
-## mcp2cli — MCP Tool Access
+## MCP Tool Access
 
-Use `mcp2cli` to interact with the Fulcrum MCP server directly from the command line. No install needed — runs via `uvx` (ephemeral venv).
+The `fulcrum` CLI passes unknown commands through to MCP tools automatically. No need for `mcp2cli` directly.
 
 ### Discovery
 
 ```bash
-# List all available tools (~16 tokens/tool)
-uvx mcp2cli --mcp-stdio "fulcrum mcp" --list
+# List all available tools
+fulcrum --list
 
-# Get detailed help for a specific tool
-uvx mcp2cli --mcp-stdio "fulcrum mcp" <tool> --help
+# Get help for a specific tool
+fulcrum list-tasks --help
 ```
 
 ### Calling Tools
 
 ```bash
-# Syntax: uvx mcp2cli --mcp-stdio "fulcrum mcp" <tool> [--param value ...]
-uvx mcp2cli --mcp-stdio "fulcrum mcp" list_tasks --search bug --statuses TO_DO,IN_PROGRESS
-uvx mcp2cli --mcp-stdio "fulcrum mcp" create_task --title "Fix bug" --type worktree
-uvx mcp2cli --mcp-stdio "fulcrum mcp" get_task --id <task-id>
-uvx mcp2cli --mcp-stdio "fulcrum mcp" move_task --id <task-id> --status DONE
+# Syntax: fulcrum <tool> [--param value ...]
+fulcrum list-tasks --search bug --statuses TO_DO,IN_PROGRESS
+fulcrum create-task --title "Fix bug" --type worktree
+fulcrum get-task --id <task-id>
+fulcrum move-task --id <task-id> --status DONE
 
 # Memory
-uvx mcp2cli --mcp-stdio "fulcrum mcp" memory_store --content "Learned X" --tags "project,pattern"
-uvx mcp2cli --mcp-stdio "fulcrum mcp" memory_search --query "deployment"
+fulcrum memory-store --content "Learned X" --tags "project,pattern"
+fulcrum memory-search --query "deployment"
 
 # Search
-uvx mcp2cli --mcp-stdio "fulcrum mcp" search --query "authentication" --entities tasks,projects
+fulcrum search --query "authentication" --entities tasks,projects
 
 # Backup
-uvx mcp2cli --mcp-stdio "fulcrum mcp" create_backup --description "Before migration"
-uvx mcp2cli --mcp-stdio "fulcrum mcp" list_backups
+fulcrum create-backup --description "Before migration"
+fulcrum list-backups
 
 # Calendar
-uvx mcp2cli --mcp-stdio "fulcrum mcp" list_calendar_events --from 2026-01-01 --to 2026-01-31
-uvx mcp2cli --mcp-stdio "fulcrum mcp" sync_calendars
+fulcrum list-calendar-events --from 2026-01-01 --to 2026-01-31
+fulcrum sync-calendars
 ```
 
 ### Token-Efficient Output
@@ -109,7 +109,15 @@ uvx mcp2cli --mcp-stdio "fulcrum mcp" sync_calendars
 Use `--toon` for compact output optimized for LLM context windows:
 
 ```bash
-uvx mcp2cli --mcp-stdio "fulcrum mcp" list_tasks --toon
+fulcrum list-tasks --toon
+```
+
+### Advanced: Direct mcp2cli
+
+For advanced use cases, you can call mcp2cli directly:
+
+```bash
+uvx mcp2cli --mcp-stdio "fulcrum mcp" <tool> [--param value ...]
 ```
 
 ## Agent Workflow Patterns
@@ -138,6 +146,42 @@ fulcrum notify "Task Complete" "Implemented the new feature and created PR #123"
 fulcrum notify "Need Input" "Which approach should I use for the database migration?"
 ```
 
+## Agent Coordination Board
+
+When multiple agents work on the same project in separate worktrees, use the coordination board to avoid conflicts (port collisions, concurrent migrations, etc.).
+
+### When to Use
+
+- **Before starting a dev server** — check if the port is already claimed
+- **Before running database migrations** — check if another agent is migrating
+- **When using shared resources** — claim them first, release when done
+
+### CLI Commands
+
+```bash
+fulcrum board                              # Read recent messages (last 1h)
+fulcrum board read --since 2h              # Custom time window
+fulcrum board read --type claim            # Filter by type
+fulcrum board read --tag port:5173         # Filter by tag
+
+fulcrum board post "Using port 5173" --type claim --tag port:5173
+fulcrum board post "Migration complete" --type info
+
+fulcrum board check port:5173              # Check if resource is claimed
+
+fulcrum board release-all                  # Release all your claims (auto-runs on Stop)
+
+fulcrum board clean                        # Remove expired messages
+fulcrum board clean --all                  # Remove ALL messages
+```
+
+### Best Practices
+
+1. **Always check before claiming** — `fulcrum board check port:<N>` before starting a dev server
+2. **Always release when done** — Post a `release` message or use `fulcrum board release-all`
+3. **Claims auto-expire** — TTL is 2 hours for claims, so crashes won't permanently block resources
+4. **The Stop hook auto-releases** — When your session ends, claims are released automatically
+
 ## Global Options
 
 - `--port=<port>` — Server port (default: 7777)
@@ -156,7 +200,7 @@ fulcrum notify "Need Input" "Which approach should I use for the database migrat
 
 1. **Use `current-task` inside worktrees** — It auto-detects which task you're in
 2. **Link PRs immediately** — Run `fulcrum current-task pr <url>` right after creating a PR
-3. **Use `mcp2cli --list` to discover tools** — Tools are always up-to-date, no static reference needed
-4. **Use `--help` on any tool** to see its parameters before calling it
+3. **Use `fulcrum --list` to discover tools** — Tools are always up-to-date, no static reference needed
+4. **Use `fulcrum <tool> --help`** to see parameters before calling a tool
 5. **Mark review when done** — `fulcrum current-task review` notifies the user
 6. **Send notifications for blocking issues** — Keep the user informed of progress
