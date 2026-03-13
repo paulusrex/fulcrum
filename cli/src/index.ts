@@ -21,9 +21,18 @@ import { boardCommand } from './commands/board'
 import { migrateFromViboraCommand } from './commands/migrate-from-vibora'
 import { updateCommand } from './commands/update'
 
+import { mcpPassthrough } from './passthrough'
+
 import pkg from '../../package.json'
 
 const VERSION = pkg.version
+
+// Known built-in subcommands — anything else gets passed through to MCP
+const KNOWN_COMMANDS = new Set([
+  'current-task', 'config', 'opencode', 'claude', 'board',
+  'notifications', 'notify', 'up', 'down', 'status', 'doctor',
+  'dev', 'mcp', 'update', 'migrate-from-vibora',
+])
 
 // Suppress stack traces unless --debug is passed
 // citty's runMain logs errors twice: once with full Error object, once with just message
@@ -85,4 +94,16 @@ const main = defineCommand({
   },
 })
 
-runMain(main)
+// Check if the command should be passed through to MCP tools
+const commandArg = process.argv.slice(2).find((a) => !a.startsWith('-'))
+const hasListFlag = process.argv.includes('--list')
+
+if (hasListFlag && !commandArg) {
+  // `fulcrum --list` → list MCP tools
+  mcpPassthrough(process.argv.slice(2)).then((code) => process.exit(code))
+} else if (commandArg && !KNOWN_COMMANDS.has(commandArg)) {
+  // Unknown command → MCP tool passthrough
+  mcpPassthrough(process.argv.slice(2)).then((code) => process.exit(code))
+} else {
+  runMain(main)
+}
