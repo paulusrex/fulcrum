@@ -75,6 +75,22 @@ export async function storeMemory(input: StoreMemoryInput): Promise<MemoryResult
 export async function searchMemories(input: SearchMemoriesInput): Promise<MemoryResult[]> {
   const limit = input.limit ?? 20
 
+  // Handle empty or wildcard queries - FTS5 doesn't accept "*" as a valid match query
+  // For wildcard searches, return all memories ordered by recency
+  if (!input.query || input.query === '*') {
+    const results = db.all(
+      sql`SELECT id, content, tags, source, created_at as "createdAt", updated_at as "updatedAt"
+          FROM memories
+          ORDER BY created_at DESC
+          LIMIT ${limit}`
+    ) as MemoryResult[]
+
+    return results.map((r) => ({
+      ...r,
+      tags: parseTags(r.tags as unknown as string),
+    }))
+  }
+
   // Build FTS5 query - use the query as-is since FTS5 supports boolean operators natively
   const ftsQuery = input.query
 
